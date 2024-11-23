@@ -12,7 +12,7 @@ A numeric matrix with 7 rows and 7 columns:
 }
 }
 \source{
-Simulated correlation matrix for the package example.
+Simulated correlation matrix for the package example
 }
 \usage{
 samplecorr

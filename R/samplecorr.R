@@ -9,5 +9,5 @@
 #'   \item{B1 to B6}{Observable Traits (columns 1-6 and rows 1-6)}
 #'   \item{Y}{The exposure variable (column 7 and row 7).}
 #' }
-#' @source Simulated correlation matrix for the package example.
+#' @source Simulated correlation matrix for the package example
 "samplecorr"

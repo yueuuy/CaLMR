@@ -19,5 +19,5 @@
 #'   \item{beta.Y}{summary coef for outcome Y.}
 #'   \item{se.Y}{summary se for outcome Y.}
 #' }
-#' @source Simulated data for the package example.
+#' @source Simulated data for the package example
 "sample_data"

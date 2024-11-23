@@ -24,7 +24,7 @@ A data frame with 37 rows and 14 variables:
 }
 }
 \source{
-Simulated data for the package example.
+Simulated data for the package example
 }
 \usage{
 sample_data

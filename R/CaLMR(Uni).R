@@ -1,0 +1,174 @@
+#' Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
+#' This function conducts the Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Uni) )
+#' The function uses summary-level association statistics from genome-wide association study
+#'
+#'@param sumtable a M*(K+1) data frame containing the GWAS summary data for K observable traits and the outcome.
+#'@param Corr.mat a (K+1)*(K+1) estimated correlation matrix of the GWAS summary statistics.
+#'                The 1st-Kth variables are related to the K observable traits, and the last variable corresponds to the outcome.
+#'                *The order of the observable traits should match with the order in the 'traitvec' vector.
+#'@param K number of observable traits
+#'@param traitvec a vector containing the names of the observable traits. This should match with the column names in sumtable.
+#'@param outcome the name of the outcome Y, and this should match with the column name in sumtable.
+#'@param sign a vector of length K containing the pre-known signs of theta_k.
+#'             [1 means positive, -1 means negative, and 0 means this trait is not associated with l-th latent exposure or lack of pre-known signs]
+#'@param T total number of iterations for the Gibbs sampler, with default T=3000
+#'@param burnin length of burn-in period, with default burnin=1500.
+#'@return a list of the testing results based on CaLMR
+#'        - bayes.rej: shows the existences of causal effect between the latent exposure and the outcome
+#'        - bayes.sign: shows the the direction of the significant causal effect. 0 means no causal effect.
+#'        - par: posterior samples
+#'        - ci: 95% credible intervals for model parameters after dropping the burnin period.
+
+##############################################################
+calmr_uni <- function(sumtable, Corr.mat, K = K, traitvec, outcome, sign, T=3000, burnin=1500) {
+  ########################################################################
+  ## Define the parameters coming from the summary data
+  ##### GWAS summary statistics for Y (outcome):
+  sbetay = sumtable[,paste0("beta.",outcome)]
+  ssigmay = sumtable[,paste0("se.",outcome)]
+  ##### GWAS summary statistics for biomarkers:
+  sbetaBk = ssigmaBk = list()
+  for (i in 1:K){
+    sbetaBk[[i]] = sumtable[,paste0("beta.",traitvec[i])]
+    ssigmaBk[[i]] = sumtable[,paste0("se.",traitvec[i])]
+  }
+
+  M <- length(sbetay)  # total number of IVs
+  ## FIX tau_x^2
+  tau_X2 <- 6.666667e-05 ##
+  ########################################################################
+  # The first K*M row is coef. for biomarkers, and the last M row is coef. for the outcome Y
+  ## Matrix S is the summary coefficients, dimension = (K+1)*M by 1
+  S <- matrix(0, nrow = (K+1)*M, ncol = 1)
+  for (i in 1:K){
+    for (j in 1:M){
+      S[(i-1)*M+j,1]=sbetaBk[[i]][j]
+    }
+  }
+  S[(K*M+1):((K+1)*M),1]=sbetay
+
+  ## The diagonal entries of the covariance matrix comes from std error in the summary data
+  cov.mat <- Corr.mat %x% diag(M)
+  ### Enter the variances of biomarkers
+  for(i in 1:K){
+    for (l in 1:K) {
+      for (j in 1:M){
+        cov.mat[(i-1)*M+j,(l-1)*M+j] = Corr.mat[i,l]*ssigmaBk[[i]][j]*ssigmaBk[[l]][j]
+      }
+    }
+  }
+  ### Enter the variances of the outcome Y
+  for (j in 1:M){
+    cov.mat[K*M+j,K*M+j]=ssigmay[j]^2
+  }
+
+
+  ########################################################################
+  # Initiation of parameters (to be updated) in the model
+  ## Vector of theta's: the first K elements are theta_k's
+  ##                    the last element is theta, which is our main interest
+  eta_theta <- rep(0.5, K+1)
+  ### Matrix A is designated to update beta_X
+  ### The diagonal entry of each block matrix is theta's
+  A_theta=matrix(0,(K+1)*M,M)
+  for (i in 1:(K+1)){
+    for (j in 1:M){
+      A_theta[(i-1)*M+j,j]<-eta_theta[i]
+    }
+  }
+  ## B_gamma: dimension = (K+1)*M by 1
+  B_gamma <- matrix(0.1, nrow=(K+1)*M, ncol=1)
+  B_gamma[(K*M+1):((K+1)*M),] <- 0  ## FIXED: The last M rows are 0 (WILL NOT UPDATE)
+  # initialize tau_k^2
+  tau_k2 <- rep(1e-04,K)
+  beta_X <- matrix(0, nrow=M, ncol=1)
+  ########################################################################
+  # Initiation of fixed parameters in the model
+  # Define hyperparameters
+  prior_alphak <- rep(0.0001,K); prior_betak <- rep(0.0001,K)  ##
+
+  ########################################################################
+  ########################################################################
+  ########################################################################
+  # Set up
+  eta_simulated = matrix(nrow=T,ncol=2*K+1)
+
+  # Start of iteration
+  for (t in 1:T) {
+    ############################
+    # Update beta_X
+    for (i in 1:(K+1)){
+      for (j in 1:M){
+        A_theta[(i-1)*M+j,j] = eta_theta[i]
+      }
+    }
+    A_tem = solve(t(A_theta)%*%A_theta)%*%t(A_theta)
+    C = A_tem %*% cov.mat %*% t(A_tem)
+    Sigma_beta_X <- diag(1/(1/diag(C)+1/tau_X2))
+    mu_beta_X <- Sigma_beta_X %*% (diag(1/diag(C)) %*% (A_tem %*% (S - B_gamma)))
+    beta_X[,1] <- mvrnorm(n = 1, mu = mu_beta_X, Sigma = Sigma_beta_X)
+
+    #############################
+    # Update the first K*M entries of B_gamma
+    # To save time, update gamma_k by SNPs
+    for (j in 1:M) {
+      Omegak = matrix(0, K, K)
+      for (k in 1:K) {
+        for (i in 1:K){
+          Omegak[k, i] = Corr.mat[k,i]*ssigmaBk[[k]][j]*ssigmaBk[[i]][j]
+        }
+      }
+      Sigma_B_gamma_k <- solve(solve(Omegak) + diag(1/tau_k2))
+      mu_B_gamma_k <- Sigma_B_gamma_k %*% solve(Omegak)%*%(S[c((0:(K-1))*M + j),] - eta_theta[1:K]*beta_X[j,])
+      B_gamma[c((0:(K-1))*M+j), ] <- mvrnorm(n=1, mu=mu_B_gamma_k, Sigma=Sigma_B_gamma_k)
+    }
+
+    #############################
+    # Update tau_k2
+    for (k in 1:K) {
+      alpha_posterior_k = prior_alphak[k] + M/2
+      beta_posterior_k = prior_betak[k] + 1/2*sum(B_gamma[((k-1)*M+1):(k*M),]^2)
+      tau_k2[k] <- 1 / rgamma(1, shape = alpha_posterior_k, rate  = beta_posterior_k)
+    }
+    ##############################
+    # Update eta_theta
+    sum.betaX_etasigma = matrix(0, K+1, K+1)
+    eta_sigma <- Corr.mat
+    tmp.mu = matrix(0, K+1, 1)
+    for (j in 1:M){
+      for (k in 1:K) {
+        for (i in 1:K) {
+          eta_sigma[k, i] = Corr.mat[k,i]*ssigmaBk[[k]][j] * ssigmaBk[[i]][j]
+        }
+      }
+      eta_sigma[K+1, K+1] = ssigmay[j]^2
+      sum.betaX_etasigma = sum.betaX_etasigma + solve(eta_sigma/beta_X[j,]^2)
+      S_j = S[(0:K)*M+j,]
+      gamma_j = B_gamma[(0:K)*M+j,]
+      tmp.mu = tmp.mu + solve(eta_sigma/beta_X[j,]^2) %*% ((S_j-gamma_j)/beta_X[j,])
+    }
+    Sigma_eta = solve(sum.betaX_etasigma)
+    mu_eta = Sigma_eta %*% tmp.mu
+    eta_theta <- mvrnorm(n = 1, mu = mu_eta, Sigma = Sigma_eta)
+    # save the results of each iteration
+    eta_simulated[t,]=c(eta_theta[K+1],eta_theta[1:K],tau_k2)
+    if (t %% 10 == 0) print(t) ##
+  }
+  eta_simulated <- as.data.frame(eta_simulated)
+  # if theta1 converges to the opposite sign, multiply theta and thetak by -1.
+  if(mean(eta_simulated[-(1:burnin),2])*sign[1] < 0) {
+    eta_simulated[,1:(K+1)]<-eta_simulated[,1:(K+1)]*(-1)
+  }
+  # calculate the confidence interval
+  ci <- t(sapply(1:ncol(eta_simulated), function(x){quantile(eta_simulated[-(1:burnin),x], c(0.025, 0.975))}))
+  bayes.rej=1
+  if(ci[1,1]<0 & ci[1,2]>0) {bayes.rej=0}  ##
+  colnames(eta_simulated) = rownames(ci) <- c("theta", paste0("theta",1:K),paste0("tauk_",1:K,"2"))
+
+  bayes.sign=0
+  if(mean(eta_simulated[-(1:burnin),1])>0 & bayes.rej==1) {bayes.sign=1}  ##
+  if(mean(eta_simulated[-(1:burnin),1])<0 & bayes.rej==1) {bayes.sign=-1}  ##
+
+  Res <- list( bayes.rej = bayes.rej, bayes.sign = bayes.sign, par = eta_simulated, ci=ci)
+  return(Res)
+}

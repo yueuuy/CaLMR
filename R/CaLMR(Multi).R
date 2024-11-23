@@ -1,5 +1,5 @@
 #' Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
-#' This function conducts the Multivariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Multi) )
+#' This function conducts the Multivariable (multi-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Multi) )
 #' The function uses summary-level association statistics from genome-wide association study
 #'
 #'@param sumtable a M*(K+1) data frame containing the GWAS summary data for K observable traits and the outcome.

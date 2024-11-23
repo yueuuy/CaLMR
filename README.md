@@ -29,4 +29,4 @@ For the same six observable traits, B1 to B6, assume they are regulated by two l
 ``` R
 # Assume all theta_kl are positive
 calmr_multi(sumtable=sample_data, Corr.mat=samplecorr, grp=list(c("B1", "B2", "B4"), ("B2", "B4", "B5", "B6")),
-L=2, K=6, traitvec, outcome="Y", sign=list(c(1,1,0,1,0,0), c(0,1,0,1,1,1)), T, burnin)
+            L=2, K=6, traitvec, outcome="Y", sign=list(c(1,1,0,1,0,0), c(0,1,0,1,1,1)), T, burnin)

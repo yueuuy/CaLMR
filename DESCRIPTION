@@ -7,6 +7,10 @@ Author@R: person(given = "Jin",
            role = c("aut", "cre"),
            email = "yue.yu@pennmedicine.upenn.edu")
 Description: R functions for conduting MR analysis for Causal analysis of Latent exposures using Mendelian Randomization (CaLMR).
+Imports: 
+    mvtnorm,
+    MASS,
+    LaplacesDemon
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

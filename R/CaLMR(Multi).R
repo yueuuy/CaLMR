@@ -24,7 +24,6 @@
 
 ##############################################################
 calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, traitvec, outcome, sign) {
-
   #########################################################################
   orderref <- cbind(traitvec, num=1:K)
   grp.n <- grp

@@ -11,11 +11,11 @@
 #'@param K number of observable traits
 #'@param traitvec a vector containing the names of the observable traits. This should match with the column names in sumtable.
 #'@param outcome the name of the outcome Y, and this should match with the column name in sumtable.
+#'@param sign a list of length L. Each sub-list sign[[l]] should be a vector of length K containing the pre-known signs of theta_kl.
+#'             [1 means positive, -1 means negative, and 0 means this trait is not associated with l-th latent exposure or lack of pre-known signs]
 #'@param T total number of iterations for the Gibbs sampler, with default T=3000
 #'@param burnin length of burn-in period, with default burnin=1500.
-#'@param sign a list of length L. Each sub-list sign[[l]] should be a vector of length K containing the pre-known signs of theta_kl.
-#             [1 means positive, -1 means negative, and 0 means this trait is not associated with l-th latent exposure or lack of pre-known signs]
-#' @return a list of the testing results based on CaLMR
+#'@return a list of the testing results based on CaLMR
 #'        - bayes.rej: a vector of length L showing the existences of causal effects for each latent exposure
 #'        - bayes.sign: a vector of length L showing the the directions of the significant causal effects. 0 means no causal effects.
 #'        - cor.X: estimated correlation matrix for the latent exposures
@@ -23,7 +23,7 @@
 #'        - ci: 95% credible intervals for model parameters after dropping the burnin period.
 
 ##############################################################
-calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, traitvec, outcome, sign) {
+calmr_multi <- function(sumtable, Corr.mat, grp, L, K, traitvec, outcome, sign, T=3000, burnin=1500) {
   #########################################################################
   orderref <- cbind(traitvec, num=1:K)
   grp.n <- grp

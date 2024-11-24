@@ -16,6 +16,8 @@ calmr_uni(
 )
 }
 \arguments{
+\item{sumtable}{a M*(K+1) data frame containing the GWAS summary data for K observable traits and the outcome.}
+
 \item{Corr.mat}{a (K+1)*(K+1) estimated correlation matrix of the GWAS summary statistics.
 The 1st-Kth variables are related to the K observable traits, and the last variable corresponds to the outcome.
 *The order of the observable traits should match with the order in the 'traitvec' vector.}
@@ -34,14 +36,11 @@ The 1st-Kth variables are related to the K observable traits, and the last varia
 \item{burnin}{length of burn-in period, with default burnin=1500.}
 }
 \value{
-a list containing the testing results containing
+
 }
 \description{
 Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between
 the outcome and the latent exposure using GWAS summary-level association statistics.
 This function conducts CaLMR(Uni) test, assuming there is one latent exposure.
 It is built under a two-sample MR framework and conducts Bayesian modeling using conjugate priors and Regression with Summary Statistics (RSS) Likelihood.
-}
-\details{
-#'@param sumtable a M*(K+1) data frame containing the GWAS summary data for K observable traits and the outcome.
 }

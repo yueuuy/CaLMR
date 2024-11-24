@@ -1,3 +1,4 @@
+#CaLMR
 CaLMR(**Causal analysis of Latent exposures using Mendelian Randomization**) is a MR method to test the causal relationships between the outcome and the latent exposures using GWAS summary-level association statistics. Since the data related to the latent exposures is not directly accessible, CaLMR borrows information from the set of observable traits co-regulated by the latent exposures to infer the exposure-outcome causal pathways. It is built under a two-sample MR framework and conducts Bayesian modeling using conjugate priors and Regression with Summary Statistics (RSS) Likelihood. A Gibbs sampler is constructed to generate the posterior samples on the model parameters using the full conditional distributions, so that the inferences can be made to determine the existences and the directions causal effects. Both Univariable and Multivariable versions of CaLMR are available.
 ## Installation
 ``` R

@@ -34,11 +34,7 @@ The 1st-Kth variables are related to the K observable traits, and the last varia
 \item{burnin}{length of burn-in period, with default burnin=1500.}
 }
 \value{
-a list of the testing results based on CaLMR
-       - bayes.rej: shows the existences of causal effect between the latent exposure and the outcome
-       - bayes.sign: shows the the direction of the significant causal effect. 0 means no causal effect.
-       - par: posterior samples
-       - ci: 95% credible intervals for model parameters after dropping the burnin period.
+a list containing the testing results containing
 }
 \description{
 Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between

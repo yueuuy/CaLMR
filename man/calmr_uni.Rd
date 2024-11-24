@@ -2,9 +2,7 @@
 % Please edit documentation in R/CaLMR(Uni).R
 \name{calmr_uni}
 \alias{calmr_uni}
-\title{Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
-This function conducts the Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Uni) )
-The function uses summary-level association statistics from genome-wide association study}
+\title{Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Uni)}
 \usage{
 calmr_uni(
   sumtable,
@@ -45,7 +43,5 @@ a list of the testing results based on CaLMR
        - ci: 95% credible intervals for model parameters after dropping the burnin period.
 }
 \description{
-Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
-This function conducts the Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Uni) )
-The function uses summary-level association statistics from genome-wide association study
+Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Uni)
 }

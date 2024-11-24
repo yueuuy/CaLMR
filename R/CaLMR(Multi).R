@@ -1,4 +1,10 @@
 #'Multivariable (multi-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Multi)
+#'
+#' Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between
+#' the outcome and the latent exposures using GWAS summary-level association statistics.
+#' This function conducts CaLMR(Multi) test, assuming there are multiple latent exposures.
+#' It is built under a two-sample MR framework and conducts Bayesian modeling using conjugate priors and Regression with Summary Statistics (RSS) Likelihood.
+#'
 #'@param sumtable a M*(K+1) data frame containing the GWAS summary data for K observable traits and the outcome.
 #'@param Corr.mat a (K+1)*(K+1) estimated correlation matrix of the GWAS summary statistics.
 #'                The 1st-Kth variables are related to the K observable traits, and the last variable corresponds to the outcome.

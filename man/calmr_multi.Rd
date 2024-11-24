@@ -50,5 +50,8 @@ a list of the testing results based on CaLMR
        - ci: 95% credible intervals for model parameters after dropping the burnin period.
 }
 \description{
-Multivariable (multi-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Multi)
+Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between
+the outcome and the latent exposures using GWAS summary-level association statistics.
+This function conducts CaLMR(Multi) test, assuming there are multiple latent exposures.
+It is built under a two-sample MR framework and conducts Bayesian modeling using conjugate priors and Regression with Summary Statistics (RSS) Likelihood.
 }

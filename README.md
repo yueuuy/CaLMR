@@ -1,6 +1,6 @@
 # CaLMR
 
- CaLMR (\underline{Ca}usal analysis of \underline{L}atent exposures using \underline{M}endelian \underline{R}andomization) is a Bayesian MR method to test the causal relationships between latent exposures and an outcome using GWAS summary-level association statistics of multiple traits co-regulated by the exposures. Both univariable and multivariable versions of CaLMR are available.
+CaLMR (<u>Ca</u>usal analysis of <u>L</u>atent exposures using <u>M</u>endelian <u>R</u>andomization) is a Bayesian MR method to test the causal relationships between latent exposures and an outcome using GWAS summary-level association statistics of multiple traits co-regulated by the exposures. Both univariable and multivariable versions of CaLMR are available.
 ## Installation
 ``` R
 # if (!require("devtools")) { install.packages("devtools") } else {}

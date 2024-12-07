@@ -2,8 +2,8 @@ Package: CaLMR
 Type: Package
 Title: Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures
 Version: 0.1.0
-Author@R: person(given = "Jin",
-           family = "Jin",
+Author@R: person(given = "Yue",
+           family = "Yu",
            role = c("aut", "cre"),
            email = "yue.yu@pennmedicine.upenn.edu")
 Description: R functions for conduting MR analysis for Causal analysis of Latent exposures using Mendelian Randomization (CaLMR).

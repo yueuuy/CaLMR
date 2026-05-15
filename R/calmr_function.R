@@ -1,9 +1,14 @@
+# SNP Processing Functions -------------------------------------------------
+# SNP Processing Functions -------------------------------------------------
+
+#' Package imports
+#'
 #' @import dplyr
 #' @importFrom data.table fread
 #' @importFrom tools file_ext
 #' @importFrom magrittr %>%
-# SNP Processing Functions -------------------------------------------------
-
+#' @keywords internal
+"_PACKAGE"
 # STEP 1: Function to find the set of SNPs with p-values that fall below a threshold for at least 2 biomarkers,
 # also excludes SNPs that are not present in Genome Build 37 and imputes BP
 # Note: reference_dir is the directory where you store genome build 37 data
@@ -149,7 +154,7 @@ significant_biomarker_snps <- function(dfs, pval_threshold, reference_dir) {
 #' @param outcome_name Character string used to prefix outcome columns.
 #'
 #' @return A merged data frame with SNP-level data from both sources.
-#' 
+#' @keywords internal
 intersection_with_outcome <- function(biomarker_df, outcome_df, outcome_name) {
   # Ensure necessary columns are present
   if (nrow(biomarker_df) == 0) {
@@ -193,6 +198,7 @@ intersection_with_outcome <- function(biomarker_df, outcome_df, outcome_name) {
 # STEP 3: Function to perform LD clumping
 # create_summary_txt_file is a boolean when set to true will produce a .txt file in the current wd containing a summary of the clumped SNPs
 # plink_path is directory where software for plink is stored
+#' LD clump SNPs
 #' @param df Data frame of merged biomarker + outcome SNPs (output of
 #'   \code{intersection_with_outcome}).
 #' @param pval_threshold P-value threshold for clumping.
@@ -205,7 +211,8 @@ intersection_with_outcome <- function(biomarker_df, outcome_df, outcome_name) {
 #' @param create_summary_txt_file Logical; keep the clumping summary file?
 #'
 #' @return A data frame of LD-clumped SNPs.
-
+#' @keywords internal
+#'
 LD_clumped_SNPs <- function(df, pval_threshold, r2, kb, plink_path, reference_dir, outcome_name, create_summary_txt_file) {
 
   if (nrow(df) == 0) {
@@ -298,7 +305,7 @@ LD_clumped_SNPs <- function(df, pval_threshold, r2, kb, plink_path, reference_di
 #' @param df Data frame of merged SNP-level data (output of
 #'   \code{LD_clumped_SNPs}).
 #' @param outcome_trait Character string identifying the outcome.
-
+#' @keywords internal
 convert_to_CaLMR_format <- function(df, outcome_trait) {
   # Extract columns with *_BETA, *_SE, and *_NEFF
   beta_cols <- grep("_BETA$", names(df), value = TRUE)

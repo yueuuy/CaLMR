@@ -10,7 +10,14 @@ Description: R functions for conduting MR analysis for Causal analysis of Latent
 Imports: 
     mvtnorm,
     MASS,
-    LaplacesDemon
+    LaplacesDemon,
+    data.table,
+    magrittr,
+    dplyr,
+    MASS,
+    stats,
+    utils,
+    tools
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

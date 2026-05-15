@@ -1,4 +1,4 @@
-#' CaLMR (Uni) Pipeline: 
+#' CaLMR (Uni) Pipeline
 #'
 #' A function that reads QC'd and harmonized GWAS summary statistics from
 #' file paths, performs SNP selection, LD clumping, sample-overlap correction,
@@ -20,14 +20,14 @@
 #'   Must match the names of \code{biomarker_paths}.
 #' @param sign A numeric vector of length K giving the pre-known signs of
 #'   theta_k (1 = positive, -1 = negative, 0 = unknown).
-#' @param Corr.mat A (K+1) x (K+1) estimated correlation matrix of the biomarker 
+#' @param Corr.mat A (K+1) x (K+1) estimated correlation matrix of the biomarker
 #'   GWAS summary statistics. Row and column names must include
 #'   all elements of \code{traitvec}. The outcome row/column (zeros with
 #'   diagonal 1) is appended automatically inside \code{calmr_uni}.
 #'   If the matrix is not provided, ld_score_dir will need to be specified
 #'   for estimating the correlation matrix in the function.
 #' @param pval_threshold A named numeric vector of length K giving the p-value
-#'   threshold for each biomarker used in IV selection. 
+#'   threshold for each biomarker used in IV selection.
 #'   Names must match \code{traitvec}.
 #' @param reference_dir Path to the directory containing 1000 Genomes (or
 #'   equivalent) reference files in PLINK \code{.bim/.bed/.fam} format, one
@@ -167,7 +167,7 @@ run_calmr_uni <- function(biomarker_paths, outcome_path, outcome_name, traitvec,
   message("=== Step 3: LD clumping ===")
   clumped_snps <- LD_clumped_SNPs(df = merged_snps, pval_threshold = pvalthr_clump,
                                   r2 = r2, kb = kb, plink_path = plink_path,
-                                  reference_dir = reference_dir, 
+                                  reference_dir = reference_dir,
                                   outcome_name = outcome_name,
                                   create_summary_txt_file = save_clump_file)
 
@@ -193,7 +193,7 @@ run_calmr_uni <- function(biomarker_paths, outcome_path, outcome_name, traitvec,
   # ---- 4. Run CaLMR (Uni) ----
   message("=== Step 5: Running CaLMR (Uni) ===")
   result <- calmr_uni( sumtable = sumtable, Corr.mat = sub_Corr.mat,
-                       T = T_iter, burnin = burnin, K = K, 
+                       T = T_iter, burnin = burnin, K = K,
                        traitvec = traitvec, outcome = outcome_name, sign = sign )
 
   # metadata for reference

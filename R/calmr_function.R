@@ -1,6 +1,4 @@
 # SNP Processing Functions -------------------------------------------------
-# SNP Processing Functions -------------------------------------------------
-
 #' Package imports
 #'
 #' @import dplyr

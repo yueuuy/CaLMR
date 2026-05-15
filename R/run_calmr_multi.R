@@ -1,8 +1,8 @@
-#' CaLMR (Multi) Pipeline: From File Paths to Multi-Exposure Causal Inference Results
+#' CaLMR (Multi) Pipeline
 #'
 #' A function that reads QC'd and harmonized GWAS summary statistics from
 #' file paths, selects IVSs, performs LD clumping, and runs
-#' CaLMR (Multi) to jointly test the causal effects of multiple latent exposures 
+#' CaLMR (Multi) to jointly test the causal effects of multiple latent exposures
 #' on an outcome.
 #'
 #' @param biomarker_paths A named character vector of file paths to the K
@@ -16,7 +16,7 @@
 #'   statistics (same format requirements as biomarker files).
 #' @param outcome_name A character string used as the outcome label.
 #' @param traitvec A character vector of length K giving the biomarker trait
-#'   names, in the order they should appear in the model. 
+#'   names, in the order they should appear in the model.
 #'   Must match names of \code{biomarker_paths}.
 #' @param grp A list of length L, where each element is a character vector of
 #'   trait names belonging to that latent factor. All names must appear in
@@ -25,7 +25,7 @@
 #'   vector of length K, where the k-th element gives the pre-known sign of
 #'   theta_kl for the k-th trait in \code{traitvec} (1 = positive,
 #'   -1 = negative, 0 = not associated or unknown).
-#' @param Corr.mat A (K+1) x (K+1) estimated correlation matrix of the biomarker 
+#' @param Corr.mat A (K+1) x (K+1) estimated correlation matrix of the biomarker
 #'   GWAS summary statistics. Row and column names must include
 #'   all elements of \code{traitvec}. The outcome row/column (zeros with
 #'   diagonal 1) is appended automatically inside \code{calmr_uni}.
@@ -157,7 +157,7 @@ run_calmr_multi <- function(biomarker_paths, outcome_path, outcome_name, traitve
   # ---- 2. Estimate sample overlap when needed----
   if (!is.null(ld_score_dir)) {
     message("=== Estimating correlation matrix ===")
-    Corr.mat <- corr_cal( 
+    Corr.mat <- corr_cal(
       gwas_list = all_biomarkers,
       traitvec = traitvec,
       outcome = outcome_name,
@@ -175,16 +175,16 @@ run_calmr_multi <- function(biomarker_paths, outcome_path, outcome_name, traitve
   # ---- 3. IV selection per latent exposure ----
   message("=== Step 2: IV Selection per latent exposure ===")
   sample_sumtable_dfs <- list()
-  
+
   for (f_idx in seq_along(factors)) {
     factor <- factors[[f_idx]]
-    
+
     sample_sumtable_df <- factor %>%
       significant_biomarker_snps(pval_threshold, reference_dir) %>%
       intersection_with_outcome(outcome_df, outcome_name) %>%
       LD_clumped_SNPs(pvalthr_clump, r2, kb, plink_path, reference_dir,
                       outcome_name, save_clump_file)
-    
+
     if (nrow(sample_sumtable_df) < min_snps) {
       warning("Factor ", f_idx, " has only ", nrow(sample_sumtable_df),
               " SNPs after clumping (need >= ", min_snps, ").", call. = FALSE)
@@ -195,21 +195,21 @@ run_calmr_multi <- function(biomarker_paths, outcome_path, outcome_name, traitve
       if (f_alt_idx == f_idx) next
       factoralt <- factors[[f_alt_idx]]
       named <- names(factoralt)
-      
+
       for (i in seq_along(named)) {
         df_name <- named[i]
         if (any(grepl(paste0("^", df_name, "_"), colnames(sample_sumtable_df)))) next
-        
+
         filtered_df <- factoralt[[i]][factoralt[[i]]$SNP %in% sample_sumtable_df$SNP, ]
-        
+
         cols_to_rename <- c("BETA", "SE", "NEFF", "PVAL")
         rename_idx <- which(colnames(filtered_df) %in% cols_to_rename)
         colnames(filtered_df)[rename_idx] <-
           paste(df_name, colnames(filtered_df)[rename_idx], sep = "_")
-        
+
         merge_cols <- c("SNP", paste(df_name, cols_to_rename, sep = "_"))
         merge_cols <- intersect(merge_cols, colnames(filtered_df))
-        
+
         sample_sumtable_df <- merge(
           sample_sumtable_df,
           filtered_df[, merge_cols, drop = FALSE],
@@ -218,29 +218,29 @@ run_calmr_multi <- function(biomarker_paths, outcome_path, outcome_name, traitve
         sample_sumtable_df <- na.omit(sample_sumtable_df)
       }
     }
-    
+
     sample_sumtable_dfs <- c(sample_sumtable_dfs, list(sample_sumtable_df))
   }
-  
+
   # ---- 4. Combine IVs ----
   message("=== Step 3: Combining and re-clumping ===")
   common_columns <- Reduce(intersect, lapply(sample_sumtable_dfs, names))
   df_list_subset <- lapply(sample_sumtable_dfs, function(df) df[, common_columns, drop = FALSE])
   combined_df <- do.call(rbind, df_list_subset)
   combined_df <- combined_df[!duplicated(combined_df$SNP), ]
-  
+
   # confounder removal if provided
   if (!is.null(confounder)) {
     combined_df <- combined_df[!combined_df$SNP %in% confounder, ]
     message("  Removed confounder SNPs.")
   }
-  
+
   # Re-clump and format
   combined_df <- combined_df %>%
     LD_clumped_SNPs(pvalthr_clump, r2, kb, plink_path, reference_dir,
                     outcome_name, save_clump_file) %>%
     convert_to_CaLMR_format(outcome_name)
-  
+
   # ---- 5. Run CaLMR (Multi) ----
   message("=== Step 4: Running CaLMR (Multi) ===")
   result <- calmr_multi( sumtable = combined_df, Corr.mat = Corr.mat,
@@ -248,11 +248,11 @@ run_calmr_multi <- function(biomarker_paths, outcome_path, outcome_name, traitve
                          T = T_iter, burnin = burnin,
                          traitvec = traitvec, outcome = outcome_name )
   # metedata for reference
-  result$calmr_info <- list( n_ivs = nrow(combined_df), 
+  result$calmr_info <- list( n_ivs = nrow(combined_df),
                              traitvec = traitvec,
                              outcome_name = outcome_name,
                              grp = grp, Corr.mat = Corr.mat )
-  
+
   message("=== Done ===")
   return(result)
 }

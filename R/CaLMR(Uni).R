@@ -1,4 +1,4 @@
-#'Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Uni)
+#' Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR (Uni)
 #'
 #' Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between
 #' the outcome and the latent exposure using GWAS summary-level association statistics.

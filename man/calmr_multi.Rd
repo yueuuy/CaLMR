@@ -2,9 +2,7 @@
 % Please edit documentation in R/CaLMR(Multi).R
 \name{calmr_multi}
 \alias{calmr_multi}
-\title{Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
-This function conducts the Multivariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Multi) )
-The function uses summary-level association statistics from genome-wide association study}
+\title{Multivariable (multiple exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR (Multi)}
 \usage{
 calmr_multi(
   sumtable,
@@ -62,7 +60,8 @@ IMPORTANTLY, indexing follows the global position in \code{traitvec} (1 to K), n
 }
 }
 \description{
-Bayesian Mendelian Randomization Analysis for Latent Exposures Leveraging GWAS Summary Statistics for Traits Co-Regulated by the Exposures ##
-This function conducts the Multivariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization ( CaLMR(Multi) )
-The function uses summary-level association statistics from genome-wide association study
+Causal analysis of Latent exposures using Mendelian Randomization (CaLMR) is an MR method that tests the causal relationships between
+the outcome and multiple latent exposures using GWAS summary-level association statistics.
+This function conducts CaLMR(Multi) test, assuming there are multiple latent exposures.
+It is built under a two-sample MR framework and conducts Bayesian modeling using conjugate priors and Regression with Summary Statistics (RSS) Likelihood.
 }

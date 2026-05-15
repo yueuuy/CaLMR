@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_calmr_multi.R
 \name{run_calmr_multi}
 \alias{run_calmr_multi}
-\title{CaLMR (Multi) Pipeline: From File Paths to Multi-Exposure Causal Inference Results}
+\title{CaLMR (Multi) Pipeline}
 \usage{
 run_calmr_multi(
   biomarker_paths,
@@ -41,7 +41,7 @@ statistics (same format requirements as biomarker files).}
 \item{outcome_name}{A character string used as the outcome label.}
 
 \item{traitvec}{A character vector of length K giving the biomarker trait
-names, in the order they should appear in the model. 
+names, in the order they should appear in the model.
 Must match names of \code{biomarker_paths}.}
 
 \item{grp}{A list of length L, where each element is a character vector of
@@ -53,7 +53,7 @@ vector of length K, where the k-th element gives the pre-known sign of
 theta_kl for the k-th trait in \code{traitvec} (1 = positive,
 -1 = negative, 0 = not associated or unknown).}
 
-\item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker 
+\item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker
 GWAS summary statistics. Row and column names must include
 all elements of \code{traitvec}. The outcome row/column (zeros with
 diagonal 1) is appended automatically inside \code{calmr_uni}.
@@ -109,6 +109,6 @@ A list with components (see CaLMR (Multi) function for details):
 \description{
 A function that reads QC'd and harmonized GWAS summary statistics from
 file paths, selects IVSs, performs LD clumping, and runs
-CaLMR (Multi) to jointly test the causal effects of multiple latent exposures 
+CaLMR (Multi) to jointly test the causal effects of multiple latent exposures
 on an outcome.
 }

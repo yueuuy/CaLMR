@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_calmr_uni.R
 \name{run_calmr_uni}
 \alias{run_calmr_uni}
-\title{CaLMR (Uni) Pipeline:}
+\title{CaLMR (Uni) Pipeline}
 \usage{
 run_calmr_uni(
   biomarker_paths,
@@ -46,7 +46,7 @@ Must match the names of \code{biomarker_paths}.}
 \item{sign}{A numeric vector of length K giving the pre-known signs of
 theta_k (1 = positive, -1 = negative, 0 = unknown).}
 
-\item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker 
+\item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker
 GWAS summary statistics. Row and column names must include
 all elements of \code{traitvec}. The outcome row/column (zeros with
 diagonal 1) is appended automatically inside \code{calmr_uni}.
@@ -54,7 +54,7 @@ If the matrix is not provided, ld_score_dir will need to be specified
 for estimating the correlation matrix in the function.}
 
 \item{pval_threshold}{A named numeric vector of length K giving the p-value
-threshold for each biomarker used in IV selection. 
+threshold for each biomarker used in IV selection.
 Names must match \code{traitvec}.}
 
 \item{reference_dir}{Path to the directory containing 1000 Genomes (or

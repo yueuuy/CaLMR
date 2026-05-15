@@ -2,7 +2,7 @@
 % Please edit documentation in R/CaLMR(Uni).R
 \name{calmr_uni}
 \alias{calmr_uni}
-\title{Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR(Uni)}
+\title{Univariable (single-exposure) Causal analysis of Latent exposures using Mendelian Randomization CaLMR (Uni)}
 \usage{
 calmr_uni(
   sumtable,

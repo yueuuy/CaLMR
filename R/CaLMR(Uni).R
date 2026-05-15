@@ -17,43 +17,44 @@
 #'@param T total number of iterations for the Gibbs sampler, with default T=3000
 #'@param burnin length of burn-in period, with default burnin=1500.
 #'@return
-#'\itemize{ 
-#' \item \code{calmr_result}: a vector contains: 
+#'\itemize{
+#' \item \code{calmr_result}: a vector contains:
 #'           \code{calmr.p} (p-value for the causal effect theta),
 #'           \code{calmr.rej} (testing for theta), and
 #'           \code{calmr.sign} (sign of theta: 1, -1, or 0).
 #' \item \code{CI}: a matrix of posterior 95% credible intervals for all model parameters after burn-in.
 #' \item \code{mcmc.detail}: full MCMC chain for all parameters, can be used to check for convergence.
 #'  }
+#' @export
 
 
 ##############################################################
 calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, outcome, sign) {
-  
+
   if (K < 3) {
     stop("You must use at least 3 biomarkers.")
   }
-  
+
   # Ensure Corr.mat has the same row and column orders as traitvec
   Corr.mat <- Corr.mat[traitvec, traitvec]
-  
-  
+
+
   if (nrow(Corr.mat) == K) {
     Corr.mat <- as.data.frame(Corr.mat)
-    
+
     # Add the new column with the name stored in outcome variable, initializing with zeros
     Corr.mat[[outcome]] <- 0
-    
+
     # Add the new row with the name stored in outcome variable, initializing with zeros
     Corr.mat <- rbind(Corr.mat, setNames(as.list(rep(0, ncol(Corr.mat))), colnames(Corr.mat)))
-    
+
     # Set the row name for the newly added row
     rownames(Corr.mat)[nrow(Corr.mat)] <- outcome
-    
+
     # Convert back to matrix if needed
     Corr.mat <- as.matrix(Corr.mat)
   }
-  
+
   ########################################################################
   ## Define the parameters coming from the summary data
   ##### GWAS summary statistics for Y (outcome):
@@ -65,7 +66,7 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     sbetaBk[[i]] = sumtable[,paste0("beta.",traitvec[i])]
     ssigmaBk[[i]] = sumtable[,paste0("se.",traitvec[i])]
   }
-  
+
   M <- length(sbetay)  # total number of IVs
   ## FIX tau_x^2
   tau_X2 <- 6.666667e-05 ##
@@ -89,18 +90,18 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
       }
     }
   }
-  
+
   ### Enter the variances of the outcome Y
   for (j in 1:M) {
     cov.mat[K*M+j,K*M+j]=ssigmay[j]^2
   }
-  
-  
+
+
   ########################################################################
-  # Initiation of parameters (to be updated) in the model 
+  # Initiation of parameters (to be updated) in the model
   ## Vector of theta's: the first K elements are theta_k's
   ##                    the last element is theta, which is our main interest
-  eta_theta <- rep(0.5*sign, K+1)  
+  eta_theta <- rep(0.5*sign, K+1)
   ### Matrix A is designated to update beta_X
   ### The diagonal entry of each block matrix is theta's
   A_theta=matrix(0,(K+1)*M,M)
@@ -110,22 +111,22 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     }
   }
   ## B_gamma: dimension = (K+1)*M by 1
-  B_gamma <- matrix(0.1, nrow=(K+1)*M, ncol=1) 
+  B_gamma <- matrix(0.1, nrow=(K+1)*M, ncol=1)
   B_gamma[(K*M+1):((K+1)*M),] <- 0  ## FIXED: The last M rows are 0 (WILL NOT UPDATE)
   # initialize tau_k^2
   tau_k2 <- rep(1e-04,K)
-  beta_X <- matrix(0, nrow=M, ncol=1) 
+  beta_X <- matrix(0, nrow=M, ncol=1)
   ########################################################################
-  # Initiation of fixed parameters in the model 
+  # Initiation of fixed parameters in the model
   # Define hyperparameters
   prior_alphak <- rep(0.0001,K); prior_betak <- rep(0.0001,K)  ##
-  
+
   ########################################################################
   ########################################################################
   ########################################################################
   # Set up
   eta_simulated = matrix(nrow=T,ncol=2*K+1)
-  
+
   # Start of iteration
   for (t in 1:T) {
     ############################
@@ -140,7 +141,7 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     Sigma_beta_X <- diag(1/(1/diag(C)+1/tau_X2))
     mu_beta_X <- Sigma_beta_X %*% (diag(1/diag(C)) %*% (A_tem %*% (S - B_gamma)))
     beta_X[,1] <- mvrnorm(n = 1, mu = mu_beta_X, Sigma = Sigma_beta_X)
-    
+
     #############################
     # Update the first K*M entries of B_gamma
     # To save time, update gamma_k by SNPs
@@ -155,7 +156,7 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
       mu_B_gamma_k <- Sigma_B_gamma_k %*% solve(Omegak)%*%(S[c((0:(K-1))*M + j),] - eta_theta[1:K]*beta_X[j,])
       B_gamma[c((0:(K-1))*M+j), ] <- mvrnorm(n=1, mu=mu_B_gamma_k, Sigma=Sigma_B_gamma_k)
     }
-    
+
     #############################
     # Update tau_k2
     for (k in 1:K) {
@@ -186,14 +187,14 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     eta_theta <- mvrnorm(n = 1, mu = mu_eta, Sigma = Sigma_eta)
     # save the results of each iteration
     eta_simulated[t,]=c(eta_theta[K+1],eta_theta[1:K],tau_k2)
-    if (t %% 10 == 0)   cat("Iteration No: ", t, "\n") 
+    if (t %% 10 == 0)   cat("Iteration No: ", t, "\n")
   }
   #########################################################################################
-  # calculate the confidence interval 
+  # calculate the confidence interval
   eta_simulated <- as.data.frame(eta_simulated)
   # empirical ci
   ci <- t(sapply(1:ncol(eta_simulated), function(x){quantile(eta_simulated[-(1:burnin),x], c(0.025, 0.975))}))
-  # Get the p values 
+  # Get the p values
   res.p <- rep(0, K+1)
   for (i in 1:(K+1)) {
     se <- (ci[i,2] - ci[i,1])/(2*qnorm(0.975))
@@ -203,7 +204,7 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     res.p[i] <- tmp.p
   }
   if (sum(res.p[2:(K+1)] < 0.3) < 1) stop("No significant thetak. Recommend to change biomarkers.")
-  
+
   # get the index of biomarker that return the most significant thetak
   idx <- which.min(res.p[2:(K+1)])
   if(mean(eta_simulated[-(1:burnin),(idx+1)])*sign[idx] < 0) {
@@ -214,13 +215,13 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
   bayes.rej=1
   if(ci[1,1]<0 & ci[1,2]>0) {bayes.rej=0}  ##
   colnames(eta_simulated) = rownames(ci) <- c("theta", paste0("theta",1:K),paste0("tauk_",1:K,"2"))
-  
+
   bayes.sign=0
   if(mean(eta_simulated[-(1:burnin),1])>0 & bayes.rej==1) {bayes.sign=1}  ##
   if(mean(eta_simulated[-(1:burnin),1])<0 & bayes.rej==1) {bayes.sign=-1}  ##
-  
-  
-  Res <- list(calmr_result = c(calmr.p = res.p[1], calmr.rej = bayes.rej, calmr.sign = bayes.sign), 
+
+
+  Res <- list(calmr_result = c(calmr.p = res.p[1], calmr.rej = bayes.rej, calmr.sign = bayes.sign),
               CI=ci,
               mcmc.detail = eta_simulated)
   return(Res)

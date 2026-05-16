@@ -358,4 +358,42 @@ convert_to_CaLMR_format <- function(df, outcome_trait) {
   return(result_df)
 }
 
+# extra helper functions
+
+
+#' Read a GWAS Summary Statistics File
+#'
+#' Reads GWAS summary statistics from various file formats and performs basic
+#' standardization.
+#'
+#' @param path File path. Supported: \code{.RDS}, \code{.RData/.rda},
+#'   \code{.csv}, \code{.tsv}, \code{.txt}, \code{.gz}.
+#'
+#' @return A data frame with standardized column names.
+#' @keywords internal
+read_gwas <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  if (ext == "rds") {
+    df <- readRDS(path)
+  } else if (ext == "rdata" || ext == "rda") {
+    env <- new.env(parent = emptyenv())
+    load(path, envir = env)
+    obj_names <- ls(env)
+    if (length(obj_names) == 0) stop("No objects found in ", path, call. = FALSE)
+    df <- get(obj_names[1], envir = env)
+  } else if (ext == "csv") {
+    df <- data.table::fread(path, sep = ",", header = TRUE, showProgress = FALSE)
+  } else {
+    df <- data.table::fread(path, header = TRUE, showProgress = FALSE)
+  }
+  df <- as.data.frame(df)
+  if (!"SNP" %in% colnames(df) && colnames(df)[1] != "SNP") {
+    colnames(df)[1] <- "SNP"
+  }
+  if ("SE" %in% colnames(df)) {
+    df <- df[df$SE != 0, ]
+  }
+  return(df)
+}
+
 

@@ -5,8 +5,8 @@
 \title{CaLMR (Uni) Pipeline}
 \usage{
 run_calmr_uni(
-  biomarker_paths,
-  outcome_path,
+  all_biomarkers,
+  outcome_df,
   outcome_name,
   traitvec,
   sign,
@@ -14,99 +14,57 @@ run_calmr_uni(
   pval_threshold,
   reference_dir,
   plink_path,
-  r2 = 0.001,
-  kb = 500,
-  pvalthr_clump = 0.005,
-  ld_score_dir = NULL,
-  confounder = NULL,
-  T_iter = 3000,
-  burnin = 1500,
-  min_snps = 30,
-  save_clump_file = FALSE
+  r2,
+  kb,
+  pvalthr_clump,
+  confounder,
+  T_iter,
+  burnin,
+  min_snps,
+  save_clump_file
 )
 }
 \arguments{
-\item{biomarker_paths}{A named character vector of file paths to the K
-biomarker GWAS summary statistics files (QC'd and harmonized). Names are
-used as trait labels throughout the pipeline and must match \code{traitvec}.
-Supported formats: \code{.RDS}, \code{.RData} (first object loaded),
-\code{.csv}, \code{.tsv}, or tab/space-delimited \code{.txt}/\code{.gz}.
-Each file must contain at minimum: \code{SNP}, \code{CHR}, \code{BETA},
-\code{SE}, \code{PVAL}, \code{A1}, \code{A2}, and \code{NEFF}.}
+\item{all_biomarkers}{A named list of K data frames, one per biomarker.}
 
-\item{outcome_path}{A single file path to the outcome GWAS summary
-statistics (same format requirements as biomarker files).}
+\item{outcome_df}{Data frame of outcome GWAS summary statistics.}
 
-\item{outcome_name}{A character string used as the outcome label.}
+\item{outcome_name}{Character string for the outcome label.}
 
-\item{traitvec}{A character vector of length K giving the biomarker trait
-names, in the order they should appear in the correlation matrix.
-Must match the names of \code{biomarker_paths}.}
+\item{traitvec}{Character vector of length K.}
 
-\item{sign}{A numeric vector of length K giving the pre-known signs of
-theta_k (1 = positive, -1 = negative, 0 = unknown).}
+\item{sign}{Numeric vector of length K (1, -1, or 0).}
 
-\item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker
-GWAS summary statistics. Row and column names must include
-all elements of \code{traitvec}. The outcome row/column (zeros with
-diagonal 1) is appended automatically inside \code{calmr_uni}.
-If the matrix is not provided, ld_score_dir will need to be specified
-for estimating the correlation matrix in the function.}
+\item{Corr.mat}{Correlation matrix (K x K or (K+1) x (K+1)).}
 
-\item{pval_threshold}{A named numeric vector of length K giving the p-value
-threshold for each biomarker used in IV selection.
-Names must match \code{traitvec}.}
+\item{pval_threshold}{Named numeric vector of p-value thresholds.}
 
-\item{reference_dir}{Path to the directory containing 1000 Genomes (or
-equivalent) reference files in PLINK \code{.bim/.bed/.fam} format, one
-per chromosome (e.g., \code{chr1.bim}, ..., \code{chr22.bim}).}
+\item{reference_dir}{Path to PLINK reference files.}
 
-\item{plink_path}{Path to the PLINK.}
+\item{plink_path}{Path to PLINK.}
 
-\item{r2}{LD clumping r-squared threshold. Default 0.001.}
+\item{r2}{LD clumping r-squared threshold.}
 
-\item{kb}{LD clumping window in kilobases. Default 500.}
+\item{kb}{LD clumping window in kilobases.}
 
-\item{pvalthr_clump}{P-value threshold used for LD clumping. Default 5e-3.}
+\item{pvalthr_clump}{P-value threshold for LD clumping.}
 
-\item{ld_score_dir}{Path to the directory containing LD score files for
-performing between-biomarker correlation. If \code{NULL}, the \code{Corr.mat}
-provided is used directly and no estimation will be performed.}
+\item{confounder}{Optional character vector of SNP IDs to exclude.}
 
-\item{confounder}{An optional character vector of SNP IDs to exclude
-(e.g., known pleiotropic SNPs). Default \code{NULL}.}
+\item{T_iter}{Total Gibbs sampler iterations.}
 
-\item{T_iter}{Total number of Gibbs sampler iterations. Default 3000.}
+\item{burnin}{Burn-in iterations.}
 
-\item{burnin}{Number of burn-in iterations to discard. Default 1500.}
+\item{min_snps}{Minimum total SNPs after preprocessing.}
 
-\item{min_snps}{Minimum number of SNPs required after preprocessing to
-proceed with CaLMR. Default 30. Recommend at least 15*K.}
-
-\item{save_clump_file}{Logical; if \code{TRUE}, keep the PLINK clumping
-summary file. Default \code{FALSE}.}
+\item{save_clump_file}{Logical; keep clumping summary file}
 }
 \value{
-A list with components (see CaLMR (Uni) function for details):
-\describe{
-  \item{\code{calmr_result}}{A named vector: \code{calmr.p} (p-value),
-    \code{calmr.rej} (reject null: 1/0), \code{calmr.sign} (direction).}
-  \item{\code{CI}}{Matrix of 95\% credible intervals for all parameters.}
-  \item{\code{mcmc.detail}}{Full MCMC chain (data frame).}
-  \item{\code{calmr_info}}{A list with \code{n_ivs} (number of IVs used),
-    \code{traitvec}, \code{outcome_name}, and \code{Corr.mat} for
-    reproducibility.}
-}
-Returns \code{NULL} with a warning if fewer than \code{min_snps} SNPs
-survive preprocessing.
-
-If \code{ld_score_dir} is specified, \code{corr_cal} is
-called to estimate the K x K biomarker correlation matrix from the data,
-overriding the supplied \code{Corr.mat}.
+A list with \code{calmr_result}, \code{CI}, \code{mcmc.detail},
+  and \code{calmr_info}. Returns \code{NULL} if too few SNPs.
 }
 \description{
-A function that reads QC'd and harmonized GWAS summary statistics from
-file paths, performs SNP selection, LD clumping, sample-overlap correction,
-and runs CaLMR(Uni) to test the causal effect of a latent exposure (regulate
-K obervable biomarkers) on an outcome.
+Performs IV selection, LD clumping, and runs CaLMR(Uni). Called by
+\code{\link{run_calmr}}. Can also be applied directly with pre-loaded data.
 }
+\keyword{internal}

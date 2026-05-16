@@ -2,8 +2,7 @@
 
 export(calmr_multi)
 export(calmr_uni)
-export(run_calmr_multi)
-export(run_calmr_uni)
+export(run_calmr)
 import(dplyr)
 importFrom(data.table,fread)
 importFrom(magrittr,"%>%")

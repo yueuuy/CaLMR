@@ -40,193 +40,191 @@
 ##############################################################
 calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, traitvec, outcome, sign) {
 
-  #########################################################################
-  orderref <- cbind(traitvec, num=1:K)
+  orderref <- cbind(traitvec, num = 1:K)
   grp.n <- grp
-  for (l in 1:L){
-    grp.n[[l]] <- sort(as.numeric(orderref[which(orderref[,1] %in% grp[[l]]), 2]))
+  for (l in 1:L) {
+    grp.n[[l]] <- sort(as.numeric(orderref[which(orderref[, 1] %in% grp[[l]]), 2]))
   }
   grp <- grp.n
 
   ########################################################################
-  ## Define the parameters coming from the summary data
-  ##### GWAS summary statistics for Y (outcome):
-  sbetay = sumtable[,paste0("beta.",outcome)]
-  ssigmay = sumtable[,paste0("se.",outcome)]
-  ##### GWAS summary statistics for biomarkers:
-  sbetaBk = ssigmaBk = list()
-  for (i in 1:K){
-    sbetaBk[[i]] = sumtable[,paste0("beta.",traitvec[i])]
-    ssigmaBk[[i]] = sumtable[,paste0("se.",traitvec[i])]
+  ## GWAS summary statistics
+  sbetay  <- sumtable[, paste0("beta.", outcome)]
+  ssigmay <- sumtable[, paste0("se.",   outcome)]
+  sbetaBk <- ssigmaBk <- list()
+  for (i in 1:K) {
+    sbetaBk[[i]]  <- sumtable[, paste0("beta.", traitvec[i])]
+    ssigmaBk[[i]] <- sumtable[, paste0("se.",   traitvec[i])]
   }
-
-  M <- length(sbetay)  # total number of IVs
-
+  M <- length(sbetay)
 
   ########################################################################
-  # The first K*M row is coef. for biomarkers, and the last M row is coef. for the outcome Y
-  ## Matrix S is the summary coefficients, dimension = (K+1)*M by 1
-  S <- matrix(0, nrow = (K+1)*M, ncol = 1)
-  for (i in 1:K){
-    for (j in 1:M){
-      S[(i-1)*M+j,1]=sbetaBk[[i]][j]
-    }
-  }
-  ## summary coef for the outcome Y
-  S[(K*M+1):((K+1)*M),1]=sbetay
+  ## [Change 1] Pre-compute per-SNP summary stats and covariance inverses ONCE.
+  ## Eliminates the (K+1)M x (K+1)M Kronecker product and ~M + L*M per-iter inversions.
 
-  ## The diagonal entries of the covariance matrix comes from std error in the summary data
-  cov.mat <- Corr.mat %x% diag(M)
-  ### Enter the variances of biomarkers
-  for(i in 1:K){
-    for (m in 1:K) {
-      for (j in 1:M){
-        cov.mat[(i-1)*M+j,(m-1)*M+j] = Corr.mat[i,m]*ssigmaBk[[i]][j]*ssigmaBk[[m]][j]
+  # Per-SNP summary-stat matrix in (M x (K+1)) layout
+  S_mat <- matrix(0, nrow = M, ncol = K + 1)
+  for (i in 1:K) S_mat[, i] <- sbetaBk[[i]]
+  S_mat[, K + 1] <- sbetay
+
+  # Per-SNP (K+1)x(K+1) cov for beta_X update (cross-terms = 0) and KxK biomarker
+  # subblock inverse for gamma update.
+  message("Pre-computing per-SNP covariance matrices...")
+  betax_covmat_list <- vector("list", M)
+  Omegak_inv_list   <- vector("list", M)
+
+  for (j in 1:M) {
+    covmatj <- matrix(0, K + 1, K + 1)
+    for (i in 1:K) {
+      for (k in 1:K) {
+        covmatj[i, k] <- Corr.mat[i, k] * ssigmaBk[[i]][j] * ssigmaBk[[k]][j]
       }
     }
-  }
-  ### Enter the variances of the outcome Y
-  for (j in 1:M){
-    cov.mat[K*M+j,K*M+j]=ssigmay[j]^2
-  }
-
-
-  ########################################################################
-  # Initiation of parameters (to be updated) in the model
-  ## Vector of theta's: the first K elements are theta_k's
-  ##                    the last element is theta, which is our main interest
-  eta_theta = matrix(0, nrow=K+1, ncol=L) # initialize the theta's
-  for (l in 1:L){
-    eta_theta[grp[[l]],l] = 0.5  # distinguish the non-zero theta's
-    eta_theta[K+1,l] = 0.5
+    covmatj[K + 1, K + 1] <- ssigmay[j]^2
+    betax_covmat_list[[j]] <- covmatj
+    Omegak_inv_list[[j]]   <- solve(covmatj[1:K, 1:K])
   }
 
-  ## B_gamma: dimension = (K+1)*M by 1
-  B_gamma <- matrix(1e-2, nrow = (K+1)*M, ncol = 1)
-  B_gamma[(K*M+1):((K+1)*M),]=0  ## FIXED: The last M rows are 0 (WILL NOT UPDATE)
-  # initialize tau_k^2
-  tau_k2 <- rep(1e-04,K)
-  tau_X2 <- rep(6.666667e-05,L)
-  D <- diag(sqrt(tau_X2))
-  R <- matrix(0.5, ncol=L, nrow=L)
-  diag(R) <- rep(1, L)
-  H <- D%*%R%*%D
-  beta_X <- matrix(1e-2, nrow=M, ncol=L)
-  ########################################################################
-  # Initiation of fixed parameters in the model
-  # Define hyperparameters
-  prior_alphak <- rep(0.0001,K); prior_betak <- rep(0.0001,K)  ##
+  # Per-group, per-SNP sub-covariance inverses for eta_theta update.
+  # eta_covmat differs from betax_covmat only in the biomarker-outcome cross-terms,
+  # which stay as raw Corr.mat values (matching the original Kronecker behavior).
+  index_lists <- lapply(1:L, function(l) c(grp[[l]], K + 1))
 
-  ########################################################################
-  ########################################################################
-  ########################################################################
-  # Set up
-  n.grp <- sum(sapply(grp, length))
-  eta_simulated=matrix(nrow=T,ncol=n.grp+K+L)
-  corr.X = matrix(nrow=T,ncol=L*(L-1)/2)
-
-  # Start of iteration
-  for (t in 1:T) {
-    ############################
-    # Update beta_X
-
-    A_tem = solve(t(eta_theta)%*%eta_theta)%*%t(eta_theta)
-    # update beta_x by SNPs
-    for(j in 1:M){
-      S_j=S[c(0:K)*M+j,]
-      gamma_j=B_gamma[c(0:K)*M+j,]
-      covmatj = matrix(0, K+1 ,K+1)
-      for(i in 1:K){
-        for(k in 1:K) {
-          covmatj[i,k] = Corr.mat[i,k]*ssigmaBk[[i]][j]*ssigmaBk[[k]][j]
+  message("Pre-computing per-group sub-covariance inverses...")
+  eta_sub_inv <- vector("list", L)
+  for (l in 1:L) {
+    idx <- index_lists[[l]]
+    eta_sub_inv[[l]] <- vector("list", M)
+    for (j in 1:M) {
+      eta_covmatj <- matrix(0, K + 1, K + 1)
+      for (i in 1:K) {
+        for (k in 1:K) {
+          eta_covmatj[i, k] <- Corr.mat[i, k] * ssigmaBk[[i]][j] * ssigmaBk[[k]][j]
         }
       }
-      covmatj[K+1, K+1] = ssigmay[j]^2
-      Cj <- A_tem%*% covmatj %*% t(A_tem)
-      sigma_betax <- solve(solve(Cj) + solve(H))
-      mu_betax <- sigma_betax %*% (solve(Cj)%*%A_tem %*%(S_j-gamma_j) )
-
-      beta_X[j,] <- mvrnorm(n =1, mu = mu_betax, Sigma = sigma_betax)
+      eta_covmatj[K + 1, K + 1] <- ssigmay[j]^2
+      for (i in 1:K) {
+        eta_covmatj[i, K + 1] <- Corr.mat[i, K + 1]
+        eta_covmatj[K + 1, i] <- Corr.mat[K + 1, i]
+      }
+      eta_sub_inv[[l]][[j]] <- solve(eta_covmatj[idx, idx])
     }
+  }
+  message("Pre-computation complete.")
 
-    # update the between-exposure correlation matrix
-    # this will be used to update the covariance matrix between exposures
-    # but the diagonal entries of the covariance matrix are fixed at tau_X2
-    W <- rinvwishart( nu=M+L+1, S=t(beta_X)%*%(beta_X)+diag(tau_X2))
-    # H<-riwish(v=M+L+1,S=t(beta_X)%*%(beta_X)+diag(tau_X2))
-    R <- solve(diag(sqrt(diag(W)))) %*% W %*% solve(diag(sqrt(diag(W))))
-    H <- D%*%R%*%D
-    corr.X[t,] <- R[upper.tri(R)]
+  ########################################################################
+  # Parameter initialization
+  eta_theta <- matrix(0, nrow = K + 1, ncol = L)
+  for (l in 1:L) {
+    eta_theta[grp[[l]], l] <- 0.5
+    eta_theta[K + 1, l]    <- 0.5
+  }
 
-    #############################
-    # Update the first K*M entries of B_gamma
-    # To save time, update gamma_k by SNPs
+  ## [Change 2] gamma stored as M x K matrix (drops the always-zero outcome rows)
+  gamma_mat <- matrix(1e-2, nrow = M, ncol = K)
+
+  tau_k2 <- rep(1e-04, K)
+  tau_X2 <- rep(6.666667e-05, L)
+  D <- diag(sqrt(tau_X2))
+  R <- matrix(0.5, ncol = L, nrow = L); diag(R) <- 1
+  H <- D %*% R %*% D
+  beta_X <- matrix(1e-2, nrow = M, ncol = L)
+
+  prior_alphak <- rep(0.0001, K)
+  prior_betak  <- rep(0.0001, K)
+
+  n.grp <- sum(sapply(grp, length))
+  eta_simulated <- matrix(nrow = T, ncol = n.grp + K + L)
+  corr.X        <- matrix(nrow = T, ncol = L * (L - 1) / 2)
+
+  ########################################################################
+  # MCMC loop
+  for (t in 1:T) {
+
+    ############################
+    ## [Change 3] beta_X update — hoist invariants, use pre-computed cov
+    A_tem   <- solve(t(eta_theta) %*% eta_theta) %*% t(eta_theta)
+    A_tem_t <- t(A_tem)
+    H_inv   <- solve(H)
 
     for (j in 1:M) {
-      Omegak = matrix(0, K, K)
-      for (k in 1:K) {
-        for (i in 1:K){
-          Omegak[k, i] = Corr.mat[k,i]*ssigmaBk[[k]][j]*ssigmaBk[[i]][j]
-        }
-      }
-      Omegak.solve = solve(Omegak)
-      nus <- matrix(0, nrow=K, ncol=1)
-      for (l in 1:L){
-        nus <- nus + beta_X[j,l]*eta_theta[1:K,l]
-      }
-      Sigma_B_gamma_k <- solve(Omegak.solve+diag(1/tau_k2))
-      mu_B_gamma_k <- Sigma_B_gamma_k %*% Omegak.solve%*%(S[c((0:(K-1))*M + j),]-nus)
-      B_gamma[c((0:(K-1))*M + j),]<-mvrnorm(n=1, mu=mu_B_gamma_k, Sigma=Sigma_B_gamma_k)
+      S_j     <- S_mat[j, ]
+      gamma_j <- c(gamma_mat[j, ], 0)
+
+      Cj          <- A_tem %*% betax_covmat_list[[j]] %*% A_tem_t
+      Cj_inv      <- solve(Cj)
+      sigma_betax <- solve(Cj_inv + H_inv)
+      mu_betax    <- sigma_betax %*% (Cj_inv %*% A_tem %*% (S_j - gamma_j))
+      beta_X[j, ] <- mvrnorm(n = 1, mu = mu_betax, Sigma = sigma_betax)
     }
 
+    W <- rinvwishart(nu = M + L + 1, S = t(beta_X) %*% beta_X + diag(tau_X2))
+    R <- solve(diag(sqrt(diag(W)))) %*% W %*% solve(diag(sqrt(diag(W))))
+    H <- D %*% R %*% D
+    corr.X[t, ] <- R[upper.tri(R)]
 
     #############################
-    # Update tau_k2
+    ## [Change 4a] gamma update with pre-computed Omegak_inv + vectorized nus
+    tau_inv_diag <- diag(1/tau_k2, nrow = K)
+    for (j in 1:M) {
+      Omegak_inv_j <- Omegak_inv_list[[j]]
+      nus      <- eta_theta[1:K, , drop = FALSE] %*% beta_X[j, ]
+      Sigma_gk <- solve(Omegak_inv_j + tau_inv_diag)
+      mu_gk    <- Sigma_gk %*% (Omegak_inv_j %*% (S_mat[j, 1:K] - nus))
+      gamma_mat[j, ] <- mvrnorm(n = 1, mu = mu_gk, Sigma = Sigma_gk)
+    }
+
+    #############################
+    ## [Change 4b] tau_k2 update using gamma_mat
     for (k in 1:K) {
-      alpha_posterior_k = prior_alphak[k] + M/2
-      beta_posterior_k = prior_betak[k] + 1/2*sum(B_gamma[((k-1)*M+1):(k*M),]^2)
-      tau_k2[k] <- 1 / rgamma(1, shape = alpha_posterior_k, rate  = beta_posterior_k)
+      alpha_posterior_k <- prior_alphak[k] + M/2
+      beta_posterior_k  <- prior_betak[k]  + 0.5 * sum(gamma_mat[, k]^2)
+      tau_k2[k] <- 1 / rgamma(1, shape = alpha_posterior_k, rate = beta_posterior_k)
     }
+
     ##############################
-    # Update eta_theta
-    for (l in 1:L){
-      index.l <- c(grp[[l]], K+1)
-      kforl <- length(grp[[l]])
-      theta_otherl <- c(1:L)[c(1:L)!=l]
-      sum.betaX_etasigma=matrix(0,kforl+1,kforl+1)
-      tmp.mu=matrix(0,kforl+1,1)
+    ## [Change 4c] eta_theta update using pre-computed eta_sub_inv + vectorized nus
+    for (l in 1:L) {
+      idx          <- index_lists[[l]]
+      kforl        <- length(grp[[l]])
+      theta_otherl <- (1:L)[-l]
+      sum_precision <- matrix(0, kforl + 1, kforl + 1)
+      sum_weighted  <- numeric(kforl + 1)
 
-      for (j in 1:M){
-        cov.mat_l = cov.mat[((index.l-1)*M+j), ((index.l-1)*M+j)]
-        tmp.solve = solve(cov.mat_l/beta_X[j,l]^2)
-        sum.betaX_etasigma = sum.betaX_etasigma + tmp.solve
-        nus <- matrix(0, nrow=kforl+1, ncol=1)
-        for (v in theta_otherl){
-          nus <- nus + beta_X[j,v]*eta_theta[index.l,v]
+      for (j in 1:M) {
+        bx2        <- beta_X[j, l]^2
+        scaled_inv <- bx2 * eta_sub_inv[[l]][[j]]
+        sum_precision <- sum_precision + scaled_inv
+
+        if (length(theta_otherl) > 0) {
+          nus <- eta_theta[idx, theta_otherl, drop = FALSE] %*% beta_X[j, theta_otherl]
+        } else {
+          nus <- numeric(kforl + 1)
         }
-        S_j=S[c(index.l-1)*M+j,]
-        gamma_j=B_gamma[c(index.l-1)*M+j,]
-        tmp.mu = tmp.mu + tmp.solve %*% ((S_j-nus-gamma_j)/beta_X[j,l])
+        S_j     <- S_mat[j, idx]
+        gamma_j <- c(gamma_mat[j, ], 0)[idx]
+        sum_weighted <- sum_weighted +
+          as.numeric(scaled_inv %*% ((S_j - nus - gamma_j) / beta_X[j, l]))
       }
-      Sigma_eta <- solve(sum.betaX_etasigma)
-      mu_eta <- Sigma_eta %*% tmp.mu
-      eta_theta[index.l,l] <- mvrnorm(n = 1, mu = mu_eta, Sigma = Sigma_eta)
+      Sigma_eta <- solve(sum_precision)
+      mu_eta    <- Sigma_eta %*% sum_weighted
+      eta_theta[idx, l] <- mvrnorm(n = 1, mu = mu_eta, Sigma = Sigma_eta)
     }
 
-
-    # save the results of each iteration
-    eta_simulated[t,] <- c(eta_theta[K+1,], unlist(lapply(1:L, function(i) eta_theta[grp[[i]], i])), tau_k2)
-    if (t %% 10 == 0) print(t) ##
+    eta_simulated[t, ] <- c(eta_theta[K+1, ],
+                            unlist(lapply(1:L, function(i) eta_theta[grp[[i]], i])),
+                            tau_k2)
+    if (t %% 10 == 0) print(t)
   }
 
-  colnames(eta_simulated) = c(paste0('theta', 1:L),
-                              unlist(lapply(1:L, function(i) paste0('theta', grp[[i]], i))),
-                              paste0('h2gamma', 1:K))
-  eta_simulated<-as.data.frame(eta_simulated)
-
   ########################################################################
-  ## empirical CI and p-values for theta_kl
-  # For each Xl, compute p-values for its corresponding theta_kl
+  # Post-processing (unchanged)
+  colnames(eta_simulated) <- c(paste0('theta', 1:L),
+                               unlist(lapply(1:L, function(i) paste0('theta', grp[[i]], i))),
+                               paste0('h2gamma', 1:K))
+  eta_simulated <- as.data.frame(eta_simulated)
+
+  # Compute p-values for each theta_kl per latent exposure
   res.p.list <- list()
   for (l in 1:L) {
     kl_cols <- paste0("theta", grp[[l]], l)
@@ -234,30 +232,27 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     ci_kl <- t(sapply(kl_cols, function(col) {
       quantile(eta_simulated[-(1:burnin), col], c(0.025, 0.975))
     }))
-    for (idx in seq_along(kl_cols)) {
-      se <- (ci_kl[idx, 2] - ci_kl[idx, 1]) / (2 * qnorm(0.975))
-      z  <- mean(eta_simulated[-(1:burnin), kl_cols[idx]]) / se
-      tmp.p <- 2*exp(pnorm(-abs(z), log.p = TRUE))
-      p_kl[idx] <- tmp.p
+    for (idx2 in seq_along(kl_cols)) {
+      se <- (ci_kl[idx2, 2] - ci_kl[idx2, 1]) / (2 * qnorm(0.975))
+      z  <- mean(eta_simulated[-(1:burnin), kl_cols[idx2]]) / se
+      tmp.p <- 2 * exp(pnorm(-abs(z), log.p = TRUE))
+      p_kl[idx2] <- tmp.p
     }
     names(p_kl) <- kl_cols
     res.p.list[[l]] <- p_kl
   }
 
-  # for each Xl, check if there os at least one significant theta_kl
   check_sig <- sapply(1:L, function(l) any(res.p.list[[l]] < 0.3))
 
-  # If NO latent exposure has any significant theta_kl, stop
   if (!any(check_sig)) {
     stop("No significant thetakl found for any latent exposure. Recommend changing biomarkers.")
   }
 
-  # otherwise, continue:
   for (l in 1:L) {
-    if (!check_sig[l]) next   # skip Xls with no significant theta_kl
-    p_kl     <- res.p.list[[l]]
+    if (!check_sig[l]) next
+    p_kl    <- res.p.list[[l]]
     idx_tmp <- which.min(p_kl)
-    k_tmp  <- grp[[l]][idx_tmp]
+    k_tmp   <- grp[[l]][idx_tmp]
     col_tmp <- names(p_kl)[idx_tmp]
 
     if (mean(eta_simulated[-(1:burnin), col_tmp]) * sign[[l]][k_tmp] < 0) {
@@ -266,28 +261,24 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     }
   }
 
-  # Final 95% CI
-  ci <- t(sapply(1:ncol(eta_simulated), function(x){quantile(eta_simulated[-(1:burnin),x], c(0.025, 0.975))}))
+  ci <- t(sapply(1:ncol(eta_simulated), function(x){
+    quantile(eta_simulated[-(1:burnin), x], c(0.025, 0.975))
+  }))
   rownames(ci) <- colnames(eta_simulated)
 
-  # get the estimated between-exposure correlation matrix
   corr_sub <- corr.X[-(1:burnin), ]
-  if (is.vector(corr_sub)) {
-    corr_sub <- matrix(corr_sub, ncol = 1)
-  }
+  if (is.vector(corr_sub)) corr_sub <- matrix(corr_sub, ncol = 1)
   cor.X <- diag(L)
   cor.X[upper.tri(cor.X)] <- colMeans(corr_sub)
   cor.X[lower.tri(cor.X)] <- t(cor.X)[lower.tri(cor.X)]
 
-  ###################################
-  Res_latent <- list() # show the results for each latent exposure
-  calmr_df <- data.frame() # separate data frame
+  Res_latent <- list()
+  calmr_df   <- data.frame()
   for (l in 1:L) {
     if (!check_sig[l]) {
       Res_latent[[l]] <- paste0("No significant thetakl found for latent exposure X_ ", l, ". Recommend changing biomarkers.")
       next
     }
-
     thetal_tmp <- paste0("theta", l)
 
     calmr.rej <- 1
@@ -298,18 +289,20 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     if (mean(eta_simulated[-(1:burnin), thetal_tmp]) < 0 & calmr.rej == 1) calmr.sign <- -1
 
     se_l <- (ci[thetal_tmp, 2] - ci[thetal_tmp, 1]) / (2 * qnorm(0.975))
-    z_l  <- mean(eta_simulated[-(1:burnin), thetal_tmp])/se_l
-    p_l  <- 2*exp(pnorm(-abs(z_l), log.p = TRUE))
+    z_l  <- mean(eta_simulated[-(1:burnin), thetal_tmp]) / se_l
+    p_l  <- 2 * exp(pnorm(-abs(z_l), log.p = TRUE))
 
     Res_latent[[l]] <- list(calmr.p = p_l, calmr.rej = calmr.rej,
                             calmr.sign = calmr.sign, thetakl.p = res.p.list[[l]])
-    calmr_df <- rbind(calmr_df, data.frame(calmr.p = p_l, calmr.rej = calmr.rej, calmr.sign = calmr.sign))
+    calmr_df <- rbind(calmr_df,
+                      data.frame(calmr.p = p_l, calmr.rej = calmr.rej, calmr.sign = calmr.sign))
   }
   rownames(calmr_df) <- NULL
 
-
-  Res <- list(calmr_result = calmr_df, Res_latent_detail = Res_latent, CI=ci,
-              cor.X = cor.X, mcmc.detail = eta_simulated)
+  Res <- list(calmr_result      = calmr_df,
+              Res_latent_detail = Res_latent,
+              CI                = ci,
+              cor.X             = cor.X,
+              mcmc.detail       = eta_simulated)
   return(Res)
 }
-

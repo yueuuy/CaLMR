@@ -11,7 +11,7 @@ run_calmr(
   outcome_name,
   traitvec,
   sign,
-  Corr.mat = NULL,
+  Corr.mat,
   pval_threshold,
   reference_dir,
   plink_path,
@@ -19,7 +19,6 @@ run_calmr(
   r2 = 0.001,
   kb = 500,
   pvalthr_clump = 0.005,
-  ld_score_dir = NULL,
   confounder = NULL,
   T_iter = 3000,
   burnin = 1500,
@@ -65,9 +64,7 @@ Structure depends on \code{method} argument:
 \item{Corr.mat}{A (K+1) x (K+1) estimated correlation matrix of the biomarker
 GWAS summary statistics. Row and column names must include
 all elements of \code{traitvec}. The outcome row/column (zeros with
-diagonal 1) is appended automatically inside \code{calmr_uni}.
-If the matrix is not provided, ld_score_dir will need to be specified
-for estimating the correlation matrix in the function.}
+diagonal 1) is appended automatically inside \code{calmr_uni}.}
 
 \item{pval_threshold}{A named numeric vector of p-value thresholds for IV
 selection, one per biomarker trait.}
@@ -89,10 +86,6 @@ trait names belonging to that latent factor. All names must appear in
 \item{kb}{LD clumping window in kilobases. Default 500.}
 
 \item{pvalthr_clump}{P-value threshold for LD clumping. Default 5e-3.}
-
-\item{ld_score_dir}{Path to the directory containing LD score files for
-performing between-biomarker correlation. If \code{NULL}, the \code{Corr.mat}
-provided is used directly and no estimation will be performed.}
 
 \item{confounder}{Optional character vector of SNP IDs to exclude.}
 

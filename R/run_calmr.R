@@ -37,8 +37,6 @@
 #'   GWAS summary statistics. Row and column names must include
 #'   all elements of \code{traitvec}. The outcome row/column (zeros with
 #'   diagonal 1) is appended automatically inside \code{calmr_uni}.
-#'   If the matrix is not provided, ld_score_dir will need to be specified
-#'   for estimating the correlation matrix in the function.
 #' @param pval_threshold A named numeric vector of p-value thresholds for IV
 #'   selection, one per biomarker trait.
 #' @param reference_dir Path to the directory containing 1000 Genomes (or
@@ -53,9 +51,6 @@
 #' @param r2 LD clumping r-squared threshold. Default 0.001.
 #' @param kb LD clumping window in kilobases. Default 500.
 #' @param pvalthr_clump P-value threshold for LD clumping. Default 5e-3.
-#' @param ld_score_dir Path to the directory containing LD score files for
-#'   performing between-biomarker correlation. If \code{NULL}, the \code{Corr.mat}
-#'   provided is used directly and no estimation will be performed.
 #' @param confounder Optional character vector of SNP IDs to exclude.
 #' @param T_iter Total Gibbs sampler iterations. Default 3000.
 #' @param burnin Burn-in iterations to discard. Default 1500.
@@ -74,10 +69,10 @@
 #' @export
 run_calmr <- function(method = c("uni", "multi"),
                       biomarker_paths, outcome_path, outcome_name, traitvec,
-                      sign, Corr.mat = NULL,
+                      sign, Corr.mat,
                       pval_threshold, reference_dir, plink_path,
                       grp = NULL, r2 = 0.001, kb = 500, pvalthr_clump = 5e-3,
-                      ld_score_dir = NULL, confounder = NULL,
+                      confounder = NULL,
                       T_iter = 3000, burnin = 1500, min_snps = NULL,
                       save_clump_file = FALSE) {
 
@@ -97,16 +92,21 @@ run_calmr <- function(method = c("uni", "multi"),
     stop("'pval_threshold' must be a named vector with names matching 'traitvec'.",
          call. = FALSE)
   }
-  if (is.null(Corr.mat) && is.null(ld_score_dir)) {
-    stop("Either 'Corr.mat' or 'ld_score_dir' must be provided.", call. = FALSE)
+
+  # ---- Corr.mat check ----
+  Corr.mat <- as.matrix(Corr.mat)
+  if (!all(dim(Corr.mat) == c(K + 1, K + 1))) {
+    stop("'Corr.mat' must be (K+1) x (K+1) = (", K + 1, " x ", K + 1, "). ",
+         "Got ", nrow(Corr.mat), " x ", ncol(Corr.mat), ". ",
+         "Use corr_cal() to get the K x K block, then append the outcome row/column.",
+         call. = FALSE)
   }
-  if (!is.null(Corr.mat)) {
-    Corr.mat <- as.matrix(Corr.mat)
-    if (!all(dim(Corr.mat) == c(K + 1, K + 1))) {
-      stop( "'Corr.mat' must be a square matrix with dimensions (K + 1) x (K + 1),
-            where K is the number of biomarkers. ", call. = FALSE)
-    }
+  cornames <- c(traitvec, outcome_name)
+  if (is.null(rownames(Corr.mat)) || !all(cornames %in% rownames(Corr.mat))) {
+    stop("Row/column names of 'Corr.mat' must include all elements of 'traitvec' ",
+         "and 'outcome_name' (\"", outcome_name, "\").", call. = FALSE)
   }
+
 
   # ---- method-specific check ----
   if (method == "uni") {
@@ -145,18 +145,6 @@ run_calmr <- function(method = c("uni", "multi"),
 
   outcome_df <- read_gwas(outcome_path)
   message("  Loaded GWAS.")
-
-  # ---- estimate correlation matrix  ----
-  if (!is.null(ld_score_dir)) {
-    message("=== Estimating correlation matrix from LD scores ===")
-    Corr.mat <- corr_cal(
-      gwas_list = all_biomarkers,
-      traitvec = traitvec,
-      outcome = outcome_name,
-      ld_score_dir = ld_score_dir
-    )
-    message("  Correlation matrix estimated.")
-  }
 
   if (!all(traitvec %in% rownames(Corr.mat))) {
     stop("Names of 'Corr.mat' must include all elements of 'traitvec'.",

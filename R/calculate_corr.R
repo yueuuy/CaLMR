@@ -1,17 +1,14 @@
 #' Estimate Sample Overlap Between GWAS Biomarker Datasets Using LD Score Regression
 #'
 #' Estimates pairwise sample overlap between K GWAS biomarker summary statistics
-#' datasets using LD score regression intercepts, then embeds the result into a
-#' (K+1) x (K+1) matrix with the outcome in the last row/column. The outcome
-#' row and column are set to zero (diagonal = 1), reflecting the two-sample MR
-#' assumption that the outcome GWAS has no sample overlap with the biomarker
-#' GWAS. The output can be used directly as the \code{Corr.mat} argument of
-#' CaLMR functions.
+#' datasets using LD score regression intercepts.
+#' To use with CaLMR functions, the user should append an outcome
+#' row/column (zeros with diagonal 1) to create a (K+1) x (K+1) matrix.
 #'
 #' @param gwas_list A named list of K data frames, one per biomarker GWAS.
 #' Each element must contain at minimum the columns:
 #'   \describe{
-#'     \item{\code{SNP}}{Character. SNP identifier (typically rsID).}
+#'     \item{\code{SNP}}{Character. SNP identifier.}
 #'     \item{\code{BETA}}{Numeric. Effect size estimate.}
 #'     \item{\code{SE}}{Numeric. Standard error of the effect size.}
 #'   }
@@ -19,9 +16,6 @@
 #'   observable biomarker traits. These must match names in \code{gwas_list}
 #'   and determine the ordering of rows/columns 1 to K. The order must match
 #'   the order expected by CaLMR functions.
-#' @param outcome A single character string giving the name of the outcome
-#'   trait. This is used only as a label for row/column K+1; no outcome GWAS
-#'   data is needed because the outcome row/column is filled with zeros.
 #' @param ld_score_dir Path to a directory containing pre-computed LD score
 #'   files, one per chromosome. Files should be named either
 #'   \code{<chr>.l2.ldscore.gz} or \code{chr<chr>.l2.ldscore.gz} and must
@@ -30,20 +24,15 @@
 #'   to be included in the regression. SNPs exceeding this threshold are set to
 #'   \code{NA}. Default is 80.
 #'
-#' @return A numeric matrix of dimension \eqn{(K+1) \times (K+1)}.
+#' @return A numeric matrix of dimension \eqn{K \times K}.
 #'   \describe{
-#'     \item{Rows/columns 1 to K}{Biomarker traits in the order of
-#'       \code{traitvec}. Off-diagonal entries are the estimated LDSC
-#'       regression intercepts representing sample overlap.}
-#'     \item{Row/column K+1}{Outcome. All off-diagonal entries are 0
-#'       (no sample overlap assumed under two-sample MR).}
-#'     \item{Diagonal}{All 1.}
+#'      Biomarker traits in the order of \code{traitvec}. Off-diagonal entries
+#'      are the estimated LDSC regression intercepts representing sample overlap.
 #'   }
-#'   Row and column names are set to \code{c(traitvec, outcome)}.
-#'   This matrix can be passed directly as \code{Corr.mat} to
-#'   \code{\link{calmr_multi}}.
+#'   Row and column names are set to \code{traitvec}.
 
-corr_cal <- function(gwas_list, traitvec, outcome, ld_score_dir, max_chi2 = 80) {
+
+corr_cal <- function(gwas_list, traitvec, ld_score_dir, max_chi2 = 80) {
 
     if (!requireNamespace("data.table", quietly = TRUE)) {
       stop("The 'data.table' package is required. Please install it.", call. = FALSE)
@@ -57,9 +46,6 @@ corr_cal <- function(gwas_list, traitvec, outcome, ld_score_dir, max_chi2 = 80) 
       missing <- setdiff(traitvec, names(gwas_list))
       stop("The following trait(s) in 'traitvec' are not in 'gwas_list': ",
            paste(missing, collapse = ", "), call. = FALSE)
-    }
-    if (outcome %in% traitvec) {
-      stop("The 'outcome' should not appear in 'traitvec'.", call. = FALSE)
     }
 
     # ensure the same order of traits in gwas_list as in traitvec
@@ -102,7 +88,7 @@ corr_cal <- function(gwas_list, traitvec, outcome, ld_score_dir, max_chi2 = 80) 
     snp_lists <- lapply(gwas_list, `[[`, "SNP")
     common_snps <- Reduce(intersect, snp_lists)
     common_snps <- intersect(common_snps, ld_scores$SNP)
-    
+
     # --- FIX 1: Filter LD scores to the common set before further QC ---
     ld_scores_subset <- ld_scores[match(common_snps, ld_scores$SNP), ]
     # --- FIX 2: Add filter for extreme LD scores, matching the original script ---
@@ -163,20 +149,12 @@ corr_cal <- function(gwas_list, traitvec, outcome, ld_score_dir, max_chi2 = 80) 
     }
     close(pb)
 
-    # ---- Step 4: Embed into (K+1) x (K+1) with outcome row/col = 0 ----
-    overlap_matrix <- matrix(0, nrow = K + 1, ncol = K + 1)
-    overlap_matrix[1:K, 1:K] <- overlap_KK
-    overlap_matrix[K + 1, K + 1] <- 1
+    # name the row / column names
+    rownames(overlap_KK) <- traitvec
+    colnames(overlap_KK) <- traitvec
 
-    ordered_names <- c(traitvec, outcome)
-    rownames(overlap_matrix) <- ordered_names
-    colnames(overlap_matrix) <- ordered_names
+    message("\nDone. Returning the between-biomarker correlation matrix.")
 
-    message("\nDone. Returning the (K+1) x (K+1) sample overlap matrix.")
-    message("  Rows/columns 1:", K, " = traits [",
-            paste(traitvec, collapse = ", "), "]")
-    message("  Row/column ", K + 1, " = outcome [", outcome,
-            "] (set to 0, no overlap assumed)")
 
-    return(overlap_matrix)
+    return(overlap_KK)
   }

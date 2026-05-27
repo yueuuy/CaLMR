@@ -4,13 +4,13 @@
 \alias{corr_cal}
 \title{Estimate Sample Overlap Between GWAS Biomarker Datasets Using LD Score Regression}
 \usage{
-corr_cal(gwas_list, traitvec, outcome, ld_score_dir, max_chi2 = 80)
+corr_cal(gwas_list, traitvec, ld_score_dir, max_chi2 = 80)
 }
 \arguments{
 \item{gwas_list}{A named list of K data frames, one per biomarker GWAS.
 Each element must contain at minimum the columns:
   \describe{
-    \item{\code{SNP}}{Character. SNP identifier (typically rsID).}
+    \item{\code{SNP}}{Character. SNP identifier.}
     \item{\code{BETA}}{Numeric. Effect size estimate.}
     \item{\code{SE}}{Numeric. Standard error of the effect size.}
   }}
@@ -19,10 +19,6 @@ Each element must contain at minimum the columns:
 observable biomarker traits. These must match names in \code{gwas_list}
 and determine the ordering of rows/columns 1 to K. The order must match
 the order expected by CaLMR functions.}
-
-\item{outcome}{A single character string giving the name of the outcome
-trait. This is used only as a label for row/column K+1; no outcome GWAS
-data is needed because the outcome row/column is filled with zeros.}
 
 \item{ld_score_dir}{Path to a directory containing pre-computed LD score
 files, one per chromosome. Files should be named either
@@ -34,25 +30,16 @@ to be included in the regression. SNPs exceeding this threshold are set to
 \code{NA}. Default is 80.}
 }
 \value{
-A numeric matrix of dimension \eqn{(K+1) \times (K+1)}.
+A numeric matrix of dimension \eqn{K \times K}.
   \describe{
-    \item{Rows/columns 1 to K}{Biomarker traits in the order of
-      \code{traitvec}. Off-diagonal entries are the estimated LDSC
-      regression intercepts representing sample overlap.}
-    \item{Row/column K+1}{Outcome. All off-diagonal entries are 0
-      (no sample overlap assumed under two-sample MR).}
-    \item{Diagonal}{All 1.}
+     Biomarker traits in the order of \code{traitvec}. Off-diagonal entries
+     are the estimated LDSC regression intercepts representing sample overlap.
   }
-  Row and column names are set to \code{c(traitvec, outcome)}.
-  This matrix can be passed directly as \code{Corr.mat} to
-  \code{\link{calmr_multi}}.
+  Row and column names are set to \code{traitvec}.
 }
 \description{
 Estimates pairwise sample overlap between K GWAS biomarker summary statistics
-datasets using LD score regression intercepts, then embeds the result into a
-(K+1) x (K+1) matrix with the outcome in the last row/column. The outcome
-row and column are set to zero (diagonal = 1), reflecting the two-sample MR
-assumption that the outcome GWAS has no sample overlap with the biomarker
-GWAS. The output can be used directly as the \code{Corr.mat} argument of
-CaLMR functions.
+datasets using LD score regression intercepts.
+To use with CaLMR functions, the user should append an outcome
+row/column (zeros with diagonal 1) to create a (K+1) x (K+1) matrix.
 }

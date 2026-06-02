@@ -1,6 +1,10 @@
 # CaLMR
 
-CaLMR (<u>Ca</u>usal analysis of <u>L</u>atent exposures using <u>M</u>endelian <u>R</u>andomization) is a Bayesian MR method to test the causal relationships between latent exposures and an outcome using GWAS summary-level association statistics of multiple traits co-regulated by the exposures. Both univariable and multivariable versions of CaLMR are available.
+CaLMR (**C**ausal **a**nalysis of **L**atent exposures using **M**endelian **R**andomization)
+is a Bayesian MR method to test the causal relationships between latent exposures and an outcome 
+using GWAS summary-level association statistics of multiple traits co-regulated by the exposures. 
+Both univariable (**CaLMR (Uni)**) and multivariable (**CaLMR (Multi)**) versions of CaLMR are available.
+
 ## Installation
 ``` R
 # if (!require("devtools")) { install.packages("devtools") } else {}
@@ -9,26 +13,68 @@ library(MASS)
 library(LaplacesDemon)
 ```
 
-## Examples
-### CaLMR (Uni)
-Assume there are six observable traits, named B1 to B6, and an outcome variable called Y. In the ``sumtable``, the columns containing the summary coefficients should be labeled as **"beta.B1"**, \..., **"beta.B6"**, and **"beta.Y"**, and the columns containing the summary standard error should be labeled as **"se.B1"**, \..., **"se.B6"**, and **"se.Y"**. The column and row names of the $1^{st}$ to $K^{th}$ variables in the input correlation matrix should match with the order in ``traitvec``.
-``` R
-# load the simulated summary data 
-data(sample_data)
-colnames(sample_data) # check how to label the column names
-# load the simulated correlation matrix
-data(samplecorr)
-colnames(sample_data)
-# check the column names and the rownames of the data match with the orders in traitvec
-traitvec = paste0("B", 1:6)
-identical(rownames(samplecorr), colnames(samplecorr), traitvec)
-# assume the signs of thetak's are all positive
-calmr_uni(sumtable=sample_data, Corr.mat=samplecorr, K = 6, traitvec, outcome="Y", sign=rep(1,K), T, burnin)
+## Quick Start
+```r
+library(CaLMR)
+
+# ---- 1. Estimate between-biomarker correlation ----
+biomarker_paths <- c(crp = "data/crp.RDS", 
+                     il6 = "data/il6.RDS",
+                     il8 = "data/il8.RDS")
+corr_KK <- corr_cal(biomarker_paths, traitvec = c("crp", "il6", "il8"),
+                    ld_score_dir = "path/to/ld_scores")
+
+# ---- 2. Append outcome row/column ----
+K <- nrow(corr_KK)
+Corr.mat <- matrix(0, K + 1, K + 1) # assume a two-sample GWAS settins
+Corr.mat[1:K, 1:K] <- corr_KK
+Corr.mat[K + 1, K + 1] <- 1
+colnames(Corr.mat) <- rownames(Corr.mat) <- c("crp", "il6", "il8", "ra")
+
+# ---- 3. Run CaLMR ----
+result <- run_calmr(
+  method = "uni",
+  biomarker_paths = biomarker_paths,
+  outcome_path = "data/ra.RDS",
+  outcome_name = "ra",
+  traitvec = c("crp", "il6", "il8"),
+  sign = c(1, 1, 1),
+  Corr.mat = Corr.mat,
+  pval_threshold = c(crp = 5e-5, il6 = 5e-5, il8 = 5e-5),
+  reference_dir = "path/to/1KG/GRCh37",
+  plink_path = "path/to/plink"
+)
+
+result$calmr_result
 ```
 
-### CaLMR (Multi)
-For the same six observable traits, B1 to B6, assume they are regulated by two latent exposures. Specifically, B1, B2, and B4 regulated by one latent exposure, while B2, B4, B5, and B6 regulated by the other. The sample codes for conducting CaLMR: 
-``` R
-# Assume all theta_kl are positive
-calmr_multi(sumtable=sample_data, Corr.mat=samplecorr, grp=list(c("B1", "B2", "B4"), c("B2", "B4", "B5", "B6")),
-            L=2, K=6, traitvec, outcome="Y", sign=list(c(1,1,0,1,0,0), c(0,1,0,1,1,1)), T, burnin)
+## Tutorial
+
+See the full [tutorial vignette](vignettes/CaLMR_tutorial.Rmd) for a complete
+walkthrough, including:
+
+- GWAS summary statistics QC and harmonization
+- Estimating the sample-overlap correlation matrix
+- Running CaLMR
+
+The tutorial demonstrates the CaLMR workflow using the chronic inflammation – Rheumatoid Arthritis 
+analysis from the paper as an example, with CRP, IL-6, IL-8, CCL2, and TNF-$\alpha$ 
+as the biomarkers and RA as the outcome. The package includes sample data (chromosomes 1–2) for format reference.
+
+
+## Input Data Format
+
+Each GWAS summary statistics file must contain these columns:
+
+| Column | Description |
+|--------|-------------|
+| `SNP`  | SNP identifier (rsID) |
+| `CHR`  | Chromosome |
+| `BETA` | Effect size estimate |
+| `SE`   | Standard error |
+| `PVAL` | P-value |
+| `A1`   | Effect allele |
+| `A2`   | Other allele |
+| `NEFF` | Effective sample size |
+
+Supported file formats: `.RDS`, `.RData`, `.csv`, `.tsv`, `.txt`, `.gz`.

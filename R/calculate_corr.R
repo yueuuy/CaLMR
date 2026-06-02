@@ -5,13 +5,13 @@
 #' To use with CaLMR functions, the user should append an outcome
 #' row/column (zeros with diagonal 1) to create a (K+1) x (K+1) matrix.
 #'
-#' @param gwas_list A named list of K data frames, one per biomarker GWAS.
-#' Each element must contain at minimum the columns:
-#'   \describe{
-#'     \item{\code{SNP}}{Character. SNP identifier.}
-#'     \item{\code{BETA}}{Numeric. Effect size estimate.}
-#'     \item{\code{SE}}{Numeric. Standard error of the effect size.}
-#'   }
+#' @param biomarker_paths A named character vector of file paths to the K
+#'   biomarker GWAS summary statistics files (QC'd and harmonized). Names are
+#'   used as trait labels and must match \code{traitvec}. Supported formats:
+#'   \code{.RDS}, \code{.RData}, \code{.csv}, \code{.tsv}, or tab/space-
+#'   delimited \code{.txt}/\code{.gz}. Each file must contain at minimum:
+#'   \code{SNP}, \code{CHR}, \code{BETA}, \code{SE}, \code{PVAL}, \code{A1},
+#'   \code{A2}, and \code{NEFF}.
 #' @param traitvec A character vector of length K giving the names of the
 #'   observable biomarker traits. These must match names in \code{gwas_list}
 #'   and determine the ordering of rows/columns 1 to K. The order must match
@@ -32,25 +32,29 @@
 #'   Row and column names are set to \code{traitvec}.
 
 
-corr_cal <- function(gwas_list, traitvec, ld_score_dir, max_chi2 = 80) {
+corr_cal <- function(biomarker_paths, traitvec, ld_score_dir, max_chi2 = 80) {
 
     if (!requireNamespace("data.table", quietly = TRUE)) {
       stop("The 'data.table' package is required. Please install it.", call. = FALSE)
     }
 
+    K <- length(traitvec)
+
     # check inputs
-    if (is.null(names(gwas_list)) || any(names(gwas_list) == "")) {
-      stop("The 'gwas_list' must be a named list.", call. = FALSE)
+    if (length(biomarker_paths) != K) {
+     stop("Length of 'biomarker_paths' (", length(biomarker_paths), ") must equal ",
+         "length of 'traitvec' (", K, ").", call. = FALSE)
     }
-    if (!all(traitvec %in% names(gwas_list))) {
-      missing <- setdiff(traitvec, names(gwas_list))
-      stop("The following trait(s) in 'traitvec' are not in 'gwas_list': ",
-           paste(missing, collapse = ", "), call. = FALSE)
+    if (is.null(names(biomarker_paths)) || !all(traitvec %in% names(biomarker_paths))) {
+      stop("'biomarker_paths' must be a named vector with names matching 'traitvec'.",
+          call. = FALSE)
     }
 
-    # ensure the same order of traits in gwas_list as in traitvec
-    gwas_list <- gwas_list[traitvec]
-    K <- length(traitvec)
+    # load gwas data
+    message("Loading biomarker GWAS data...")
+    gwas_list <- lapply(biomarker_paths[traitvec], read_gwas)
+    names(gwas_list) <- traitvec
+
 
     # load LD scores
     load_ld_scores <- function(dir_path, chromosomes = 1:22) {

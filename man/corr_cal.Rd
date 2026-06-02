@@ -4,16 +4,16 @@
 \alias{corr_cal}
 \title{Estimate Sample Overlap Between GWAS Biomarker Datasets Using LD Score Regression}
 \usage{
-corr_cal(gwas_list, traitvec, ld_score_dir, max_chi2 = 80)
+corr_cal(biomarker_paths, traitvec, ld_score_dir, max_chi2 = 80)
 }
 \arguments{
-\item{gwas_list}{A named list of K data frames, one per biomarker GWAS.
-Each element must contain at minimum the columns:
-  \describe{
-    \item{\code{SNP}}{Character. SNP identifier.}
-    \item{\code{BETA}}{Numeric. Effect size estimate.}
-    \item{\code{SE}}{Numeric. Standard error of the effect size.}
-  }}
+\item{biomarker_paths}{A named character vector of file paths to the K
+biomarker GWAS summary statistics files (QC'd and harmonized). Names are
+used as trait labels and must match \code{traitvec}. Supported formats:
+\code{.RDS}, \code{.RData}, \code{.csv}, \code{.tsv}, or tab/space-
+delimited \code{.txt}/\code{.gz}. Each file must contain at minimum:
+\code{SNP}, \code{CHR}, \code{BETA}, \code{SE}, \code{PVAL}, \code{A1},
+\code{A2}, and \code{NEFF}.}
 
 \item{traitvec}{A character vector of length K giving the names of the
 observable biomarker traits. These must match names in \code{gwas_list}

@@ -6,6 +6,6 @@
 \alias{CaLMR-package}
 \title{Package imports}
 \description{
-R functions for conduting MR analysis for Causal analysis of Latent exposures using Mendelian Randomization (CaLMR).
+R functions for conducting MR analysis for Causal analysis of Latent exposures using Mendelian Randomization (CaLMR).
 }
 \keyword{internal}

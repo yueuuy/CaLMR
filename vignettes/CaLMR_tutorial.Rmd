@@ -11,10 +11,10 @@ vignette: >
 knitr::opts_chunk$set(eval = FALSE)
 ```
 
-The tutorial demonstrates the CaLMR workflow using the chronic inflammation – Rheumatoid Arthritis 
-analysis from the paper as an example, with CRP, IL-6, IL-8, CCL2, and TNF-$\alpha$ 
+The tutorial demonstrates the CaLMR workflow using the Chronic Inflammation - Rheumatoid Arthritis 
+analysis from the paper as an example, with CRP, IL-6, IL-8, CCL2, and TNF-α 
 as the biomarkers and RA as the outcome. 
-The package includes sample data (chromosomes 1–2) for format reference.
+The package includes sample data (chromosomes 1-2) for format reference.
 
 We cover four stages:
 
@@ -58,7 +58,7 @@ columns:
 | `A2`   | Other allele |
 | `NEFF` | Effective sample size |
 
-The package includes sample data (chromosomes 1–2 only) to illustrate the
+The package includes sample data (chromosomes 1-2 only) to illustrate the
 expected format:
 
 ```{r sample-data, eval=TRUE}
@@ -73,11 +73,11 @@ str(crp)
 
 The sample data files included are:
 
-- `crp.RDS`, `il6.RDS`, `il8.RDS`, `ccl2.RDS`, `tnfa.RDS` — biomarker GWAS
-- `ra.RDS` — outcome GWAS
+- `crp.RDS`, `il6.RDS`, `il8.RDS`, `ccl2.RDS`, `tnfa.RDS` - biomarker GWAS
+- `ra.RDS` - outcome GWAS
 - `corr_biomarker.RDS` — pre-computed 5×5 between-biomarker correlation matrix
 
-These are subsets (chr 1–2) for format reference only. A full analysis
+These are subsets (chr 1-2) for format reference only. A full analysis
 requires genome-wide data.
 
 
@@ -217,7 +217,7 @@ print(round(corr_KK, 3))
 
 Define the file paths to QC'd genome-wide GWAS data and the analysis
 parameters. Both `corr_cal()` and `run_calmr()` take the same
-`biomarker_paths` format — a named character vector of file paths.
+`biomarker_paths` format - a named character vector of file paths.
 
 ```{r setup-analysis}
 biomarker_paths <- c(

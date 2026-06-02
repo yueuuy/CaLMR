@@ -57,9 +57,9 @@ walkthrough, including:
 - Estimating the sample-overlap correlation matrix
 - Running CaLMR
 
-The tutorial demonstrates the CaLMR workflow using the chronic inflammation – Rheumatoid Arthritis 
-analysis from the paper as an example, with CRP, IL-6, IL-8, CCL2, and TNF-$\alpha$ 
-as the biomarkers and RA as the outcome. The package includes sample data (chromosomes 1–2) for format reference.
+The tutorial demonstrates the CaLMR workflow using the Chronic Inflammation - Rheumatoid Arthritis 
+analysis from the paper as an example, with CRP, IL-6, IL-8, CCL2, and TNF-α 
+as the biomarkers and RA as the outcome. The package includes sample data (chromosomes 1-2) for format reference.
 
 
 ## Input Data Format

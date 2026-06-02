@@ -17,21 +17,21 @@ library(LaplacesDemon)
 ```r
 library(CaLMR)
 
-# ---- 1. Estimate between-biomarker correlation ----
+# 1. Estimate between-biomarker correlation
 biomarker_paths <- c(crp = "data/crp.RDS", 
                      il6 = "data/il6.RDS",
                      il8 = "data/il8.RDS")
 corr_KK <- corr_cal(biomarker_paths, traitvec = c("crp", "il6", "il8"),
                     ld_score_dir = "path/to/ld_scores")
 
-# ---- 2. Append outcome row/column ----
+# 2. Append outcome row/column 
 K <- nrow(corr_KK)
-Corr.mat <- matrix(0, K + 1, K + 1) # assume a two-sample GWAS settins
+Corr.mat <- matrix(0, K + 1, K + 1) # assume a two-sample GWAS setting
 Corr.mat[1:K, 1:K] <- corr_KK
 Corr.mat[K + 1, K + 1] <- 1
 colnames(Corr.mat) <- rownames(Corr.mat) <- c("crp", "il6", "il8", "ra")
 
-# ---- 3. Run CaLMR ----
+# 3. Run CaLMR
 result <- run_calmr(
   method = "uni",
   biomarker_paths = biomarker_paths,

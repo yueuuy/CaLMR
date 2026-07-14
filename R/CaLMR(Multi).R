@@ -59,9 +59,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
   M <- length(sbetay)
 
   ########################################################################
-  ## [Change 1] Pre-compute per-SNP summary stats and covariance inverses ONCE.
-  ## Eliminates the (K+1)M x (K+1)M Kronecker product and ~M + L*M per-iter inversions.
-
   # Per-SNP summary-stat matrix in (M x (K+1)) layout
   S_mat <- matrix(0, nrow = M, ncol = K + 1)
   for (i in 1:K) S_mat[, i] <- sbetaBk[[i]]
@@ -140,7 +137,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
   ########################################################################
   # MCMC loop
   for (t in 1:T) {
-
     ############################
     ## [Change 3] beta_X update — hoist invariants, use pre-computed cov
     A_tem   <- solve(t(eta_theta) %*% eta_theta) %*% t(eta_theta)
@@ -164,7 +160,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     corr.X[t, ] <- R[upper.tri(R)]
 
     #############################
-    ## [Change 4a] gamma update with pre-computed Omegak_inv + vectorized nus
     tau_inv_diag <- diag(1/tau_k2, nrow = K)
     for (j in 1:M) {
       Omegak_inv_j <- Omegak_inv_list[[j]]
@@ -175,7 +170,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     }
 
     #############################
-    ## [Change 4b] tau_k2 update using gamma_mat
     for (k in 1:K) {
       alpha_posterior_k <- prior_alphak[k] + M/2
       beta_posterior_k  <- prior_betak[k]  + 0.5 * sum(gamma_mat[, k]^2)
@@ -183,7 +177,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
     }
 
     ##############################
-    ## [Change 4c] eta_theta update using pre-computed eta_sub_inv + vectorized nus
     for (l in 1:L) {
       idx          <- index_lists[[l]]
       kforl        <- length(grp[[l]])
@@ -218,7 +211,6 @@ calmr_multi <- function(sumtable, Corr.mat, grp, L, K, T=3000, burnin=1500, trai
   }
 
   ########################################################################
-  # Post-processing (unchanged)
   colnames(eta_simulated) <- c(paste0('theta', 1:L),
                                unlist(lapply(1:L, function(i) paste0('theta', grp[[i]], i))),
                                paste0('h2gamma', 1:K))

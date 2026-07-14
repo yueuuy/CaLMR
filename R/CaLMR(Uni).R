@@ -60,9 +60,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
   tau_X2 <- 6.666667e-05
 
   ########################################################################
-  ## [Change 1] Pre-compute per-SNP summary stats and covariance inverses ONCE.
-  ## Eliminates the (K+1)M x (K+1)M Kronecker product and ~3M per-iter inversions.
-
   # Per-SNP summary-stat matrices in (M x (K+1)) layout
   S_mat <- matrix(0, nrow = M, ncol = K + 1)
   for (i in 1:K) S_mat[, i] <- sbetaBk[[i]]
@@ -103,21 +100,16 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
 
   ########################################################################
   # Parameter initialization
-  ## [Change 3a] eta_theta is now length K+1 (outcome init independent of biomarker order)
   eta_theta <- c(0.5 * sign, 0.5)
 
-  ## [Change 2] gamma stored as M x K matrix (drops the always-zero outcome rows)
   gamma_mat <- matrix(0.1, nrow = M, ncol = K)
 
   tau_k2 <- rep(1e-04, K)
 
-  ## [Change 3b] beta_X is a length-M numeric vector, not an M x 1 matrix
   beta_X <- numeric(M)
 
   prior_alphak <- rep(0.0001, K)
   prior_betak  <- rep(0.0001, K)
-
-  ## [Change 3c] A_theta initialization removed (no longer used after Change 4)
 
   eta_simulated <- matrix(nrow = T, ncol = 2 * K + 1)
 
@@ -126,7 +118,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
   for (t in 1:T) {
 
     ############################
-    ## [Change 4] Scalarized beta_X update.
     ## A_theta is block-diagonal with eta per SNP, so t(A)%*%A = (eta^T eta) * I_M.
     ## C is diagonal -> each beta_X[j] is an independent rnorm draw.
     eta_vec <- eta_theta
@@ -143,7 +134,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     }
 
     #############################
-    ## [Change 5a] gamma update using pre-computed Omegak_inv
     tau_inv_diag <- diag(1/tau_k2, nrow = K)
     for (j in 1:M) {
       Omegak_inv_j <- Omegak_inv_list[[j]]
@@ -154,7 +144,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     }
 
     #############################
-    ## [Change 5b] tau_k2 update using gamma_mat
     for (k in 1:K) {
       alpha_posterior_k <- prior_alphak[k] + M/2
       beta_posterior_k  <- prior_betak[k]  + 0.5 * sum(gamma_mat[, k]^2)
@@ -162,7 +151,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
     }
 
     ##############################
-    ## [Change 5c] eta_theta update using pre-computed eta_sigma_inv.
     ## solve(eta_sigma / bx^2) = bx^2 * eta_sigma_inv  (avoids per-SNP inversion).
     sum_precision <- matrix(0, K + 1, K + 1)
     sum_weighted  <- numeric(K + 1)
@@ -185,7 +173,6 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
   }
 
   ########################################################################
-  # Post-processing (unchanged)
   eta_simulated <- as.data.frame(eta_simulated)
   ci <- t(sapply(1:ncol(eta_simulated), function(x){
     quantile(eta_simulated[-(1:burnin), x], c(0.025, 0.975))
@@ -221,10 +208,10 @@ calmr_uni <- function(sumtable, Corr.mat, T=3000, burnin=1500, K = K, traitvec, 
   if (mean(eta_simulated[-(1:burnin), 1]) > 0 & bayes.rej == 1) bayes.sign <-  1
   if (mean(eta_simulated[-(1:burnin), 1]) < 0 & bayes.rej == 1) bayes.sign <- -1
 
-  Res <- list(calmr_result = c(calmr.p   = res.p[1],
+  Res <- list(calmr_result = c(calmr.p = res.p[1],
                                calmr.rej = bayes.rej,
                                calmr.sign = bayes.sign),
-              CI          = ci,
+              CI = ci,
               mcmc.detail = eta_simulated)
   return(Res)
 }

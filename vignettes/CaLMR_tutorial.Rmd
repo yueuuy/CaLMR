@@ -177,6 +177,17 @@ corr_KK <- corr_cal(
 )
 ```
 
+For this tutorial, we provide the pre-computed correlation matrix from the
+paper for your reference:
+
+```{r load-corr, eval=TRUE}
+data_dir <- system.file("extdata", package = "CaLMR")
+traitvec <- c("crp", "il6", "il8", "ccl2", "tnfa")
+
+corr_KK <- readRDS(file.path(data_dir, "corr_biomarker.RDS"))
+print(round(corr_KK, 3))
+```
+
 
 ### Building the (K+1) × (K+1) matrix for CaLMR
 
@@ -199,16 +210,7 @@ print(round(Corr.mat, 3))
 ```
 
 
-For this tutorial, we provide the pre-computed correlation matrix from the
-paper for your reference:
 
-```{r load-corr, eval=TRUE}
-data_dir <- system.file("extdata", package = "CaLMR")
-traitvec <- c("crp", "il6", "il8", "ccl2", "tnfa")
-
-corr_KK <- readRDS(file.path(data_dir, "corr_biomarker.RDS"))
-print(round(corr_KK, 3))
-```
 
 
 ## Part 4: Running CaLMR

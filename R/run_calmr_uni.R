@@ -74,12 +74,12 @@ run_calmr_uni <- function(all_biomarkers, outcome_df, outcome_name, traitvec,
 
   # ---- 2. Run CaLMR (Uni) ----
   message("=== Step 5: Running CaLMR (Uni) ===")
-  result <- calmr_uni( sumtable = sumtable, Corr.mat = sub_Corr.mat,
+  result <- calmr_uni(sumtable = sumtable, Corr.mat = Corr.mat,
                        T = T_iter, burnin = burnin, K = K,
-                       traitvec = traitvec, outcome = outcome_name, sign = sign )
+                       traitvec = traitvec, outcome = outcome_name, sign = sign)
 
-  result$calmr_info <- list( n_ivs = nrow(sumtable), traitvec = traitvec,
-                             outcome_name = outcome_name, Corr.mat = sub_Corr.mat )
+  result$calmr_info <- list(n_ivs = nrow(sumtable), traitvec = traitvec,
+                             outcome_name = outcome_name, Corr.mat = Corr.mat)
 
   message("=== Done ===")
   return(result)

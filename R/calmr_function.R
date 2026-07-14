@@ -4,9 +4,15 @@
 #' @import dplyr
 #' @importFrom data.table fread
 #' @importFrom tools file_ext
+#' @importFrom MASS mvrnorm
+#' @importFrom LaplacesDemon rinvwishart
+#' @importFrom stats aggregate na.omit pnorm qnorm quantile rgamma rnorm setNames
+#' @importFrom utils read.table write.table
 #' @importFrom magrittr %>%
 #' @keywords internal
 "_PACKAGE"
+utils::globalVariables(c("SNP", "CHR", "BP", "max_pval_below_threshold",
+                         "everything", "all_of"))
 # STEP 1: Function to find the set of SNPs with p-values that fall below a threshold for at least 2 biomarkers,
 # also excludes SNPs that are not present in Genome Build 37 and imputes BP
 # Note: reference_dir is the directory where you store genome build 37 data

@@ -40,6 +40,6 @@ A numeric matrix of dimension \eqn{K \times K}.
 \description{
 Estimates pairwise sample overlap between K GWAS biomarker summary statistics
 datasets using LD score regression intercepts.
-To use with CaLMR functions, the user should append an outcome
+WARNING: To use with CaLMR functions, the user should append an outcome
 row/column (zeros with diagonal 1) to create a (K+1) x (K+1) matrix.
 }

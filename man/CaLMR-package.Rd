@@ -8,4 +8,13 @@
 \description{
 R functions for conducting MR analysis for Causal analysis of Latent exposures using Mendelian Randomization (CaLMR).
 }
+\author{
+\strong{Maintainer}: Yue Yu \email{yy4778@princeton.edu}
+
+Other contributors:
+\itemize{
+  \item Andrew Lakkis \email{andrew.lakkis@pennmedicine.upenn.edu} [contributor]
+}
+
+}
 \keyword{internal}

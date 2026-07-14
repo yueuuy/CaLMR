@@ -50,7 +50,7 @@ result$calmr_result
 
 ## Tutorial
 
-See the full [tutorial vignette](vignettes/CaLMR_tutorial.Rmd) for a complete
+See the full [tutorial vignette](https://yueuuy.github.io/CaLMR/articles/CaLMR_tutorial.html) for a complete
 walkthrough, including:
 
 - GWAS summary statistics QC and harmonization

@@ -16,7 +16,7 @@ jobs:
         with:
           extra-packages: any::pkgdown
       - name: Build site
-        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = TRUE)
         shell: Rscript {0}
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
